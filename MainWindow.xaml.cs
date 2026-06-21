@@ -490,7 +490,7 @@ namespace ArtaleProBuff
             }
             else
             {
-                Dispatcher.BeginInvoke(action);
+                Dispatcher.Invoke(action);
             }
         }
 
