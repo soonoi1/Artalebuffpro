@@ -31,16 +31,19 @@
 
 ## 🚀 软件安装与运行指南
 
-### 1. 软件环境要求
-- **操作系统**：Windows 10 / Windows 11 (WinRT 依赖要求)
-- **运行时环境**：[.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (若您电脑未安装，运行本程序时会提示自动引导下载安装)
+### 1. 版本选择与环境要求
+- **无需激活版 (`ArtaleProBuff_无需激活版.exe`)**：双击即可直接使用，跳过了任何激活码和机器码的校验逻辑，方便内部测试或信任分发。
+- **安全激活版 (`ArtaleProBuff.exe`)**：需要绑定用户机器码，配合激活码生成器方可运行，适用于公开分发和权限受限场景。
+- **环境要求**：
+  - **操作系统**：Windows 10 / Windows 11 (以支持 WinRT DWM 截图组件)
+  - **运行时环境**：[.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (若您电脑未安装，运行程序时会自动引导下载安装)
 
-### 2. 用户激活步骤
+### 2. 安全激活版激活步骤 (如果您分发的是 `ArtaleProBuff.exe`)
 1. 双击打开根目录下的 **[ArtaleProBuff.exe](file:///d:/VSC/HHH/ArtaleProBuff.exe)**。
 2. 若是首次启动，程序会弹出“🔑 软件激活”窗口。
 3. 点击“**复制**”按钮获取您的“机器码”。
-4. 将机器码发送给作者，作者会发回一串“激活码”。
-5. 在软件输入框中粘贴激活码，点击“**激活软件**”即可完成永久授权绑定！
+4. 将机器码发送给软件作者，作者通过唯一的 **[ActivationGenerator.exe](file:///d:/VSC/HHH/ActivationGenerator.exe)** 生成对应的激活码（作者在本地保留此生成器即可，无需发给普通用户）。
+5. 在软件输入框中粘贴激活码，点击“**激活软件**”即可完成绑定！
 
 ---
 

@@ -6,6 +6,7 @@ namespace ArtaleProBuff
     {
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+#if !DISABLE_ACTIVATION
             // Check if software is activated on this machine
             if (!LicenseManager.IsActivated())
             {
@@ -16,6 +17,7 @@ namespace ArtaleProBuff
                     return;
                 }
             }
+#endif
 
             // Launch the main window if activated
             var mainWindow = new MainWindow();
