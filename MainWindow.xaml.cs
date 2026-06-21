@@ -639,6 +639,9 @@ namespace ArtaleProBuff
         {
             if (_isRunningGlobal) return;
             
+            // Stop real-time preview loop during macro execution
+            StopPreviewLoop();
+            
             // 缓存后台模式状态（避免后台线程跨线程访问UI控件导致静默异常）
             _isBgMode = switchBgMode.IsChecked == true;
             
@@ -739,6 +742,12 @@ namespace ArtaleProBuff
             txtPatrolStatus.Text = "已停止";
             txtExpStatus.Text = switchExpMonitor.IsChecked == true ? "监测关闭" : "监测关闭";
             foreach (var g in _patrolGroups) g.Status = "等待运行";
+
+            // Restart real-time preview loop if settings panel is currently open
+            if (SettingsPanel.Visibility == Visibility.Visible)
+            {
+                StartPreviewLoop();
+            }
         }
 
         // Macro Logic Implementations
@@ -1302,12 +1311,30 @@ namespace ArtaleProBuff
             }
         }
 
+        private static string SanitizeOcrText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+            
+            // Standardize spaces and case
+            string t = text.Trim().ToLower();
+            
+            // Commonly misidentified characters in numbers:
+            // 'l' or 'i' instead of '1'
+            // 'o' instead of '0'
+            // Replace 'l' or 'i' with '1' and 'o' with '0' ONLY when they are adjacent to digits or decimal points!
+            t = System.Text.RegularExpressions.Regex.Replace(t, @"(?<=\d)[li](?=\d|%)|(?<=\d[.,]\d*)[li]", "1");
+            t = System.Text.RegularExpressions.Regex.Replace(t, @"(?<=\d)[o](?=\d|%)|(?<=\d[.,]\d*)[o]", "0");
+            
+            return t;
+        }
+
         private static double? ParseExpValue(string text)
         {
-            if (string.IsNullOrWhiteSpace(text)) return null;
+            string sanitized = SanitizeOcrText(text);
+            if (string.IsNullOrWhiteSpace(sanitized)) return null;
             
             // Look for percentage first, e.g. "99.82%" or "12.3%"
-            var percentMatch = System.Text.RegularExpressions.Regex.Match(text, @"(\d+[\.,]\d+)\s*%");
+            var percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+[\.,]\d+)\s*%");
             if (percentMatch.Success)
             {
                 if (double.TryParse(percentMatch.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
@@ -1317,7 +1344,7 @@ namespace ArtaleProBuff
             }
             
             // If no percentage match, look for integer percentages like "90%"
-            percentMatch = System.Text.RegularExpressions.Regex.Match(text, @"(\d+)\s*%");
+            percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+)\s*%");
             if (percentMatch.Success)
             {
                 if (double.TryParse(percentMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
@@ -1327,7 +1354,7 @@ namespace ArtaleProBuff
             }
 
             // Try to extract the first continuous sequence of digits (including commas/dots for decimals/thousands)
-            var numberMatch = System.Text.RegularExpressions.Regex.Match(text, @"[\d\.,\s]+");
+            var numberMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"[\d\.,\s]+");
             if (numberMatch.Success)
             {
                 string clean = System.Text.RegularExpressions.Regex.Replace(numberMatch.Value, @"[\s,]+", "");
@@ -1367,7 +1394,13 @@ namespace ArtaleProBuff
                 var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(randomAccessStream);
                 var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
 
+                // Robust fallback for OcrEngine languages
                 var engine = Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages();
+                if (engine == null && Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages.Count > 0)
+                {
+                    engine = Windows.Media.Ocr.OcrEngine.TryCreateFromLanguage(Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages[0]);
+                }
+                
                 if (engine != null)
                 {
                     var result = await engine.RecognizeAsync(softwareBitmap);
@@ -1381,6 +1414,68 @@ namespace ArtaleProBuff
             return string.Empty;
         }
 
+        private CancellationTokenSource? _previewCts = null;
+
+        private void StartPreviewLoop()
+        {
+            StopPreviewLoop();
+            if (_isRunningGlobal) return; // Main macro loop will handle updates during execution
+            
+            _previewCts = new CancellationTokenSource();
+            var token = _previewCts.Token;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        IntPtr hwnd = GetTargetHwnd();
+                        if (hwnd != IntPtr.Zero && !IsIconic(hwnd))
+                        {
+                            var bmp = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
+                            if (bmp != null)
+                            {
+                                string ocrText = await OcrBitmapAsync(bmp);
+                                double? val = ParseExpValue(ocrText);
+                                
+                                UpdateUi(() =>
+                                {
+                                    imgExpRegion.Source = bmp;
+                                    if (string.IsNullOrWhiteSpace(ocrText))
+                                    {
+                                        txtExpOcrText.Text = "未识别到字符";
+                                    }
+                                    else
+                                    {
+                                        txtExpOcrText.Text = val.HasValue 
+                                            ? $"{ocrText.Trim()} (解析成功: {val.Value})" 
+                                            : $"{ocrText.Trim()} (解析失败)";
+                                    }
+                                });
+                            }
+                        }
+                        await Task.Delay(1500, token);
+                    }
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Preview loop error: {ex.Message}");
+                }
+            }, token);
+        }
+
+        private void StopPreviewLoop()
+        {
+            if (_previewCts != null)
+            {
+                _previewCts.Cancel();
+                _previewCts.Dispose();
+                _previewCts = null;
+            }
+        }
+
         private void SwitchTab(object? selectedItem)
         {
             if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null) return;
@@ -1389,6 +1484,9 @@ namespace ArtaleProBuff
             PatrolPanel.Visibility = Visibility.Collapsed;
             PresetsPanel.Visibility = Visibility.Collapsed;
             SettingsPanel.Visibility = Visibility.Collapsed;
+            
+            // Stop preview loop when switching tabs
+            StopPreviewLoop();
             
             if (selectedItem is NavigationViewItem item)
             {
@@ -1408,6 +1506,9 @@ namespace ArtaleProBuff
                 else if (content.Contains("全局与安全"))
                 {
                     SettingsPanel.Visibility = Visibility.Visible;
+                    
+                    // Start real-time preview loop
+                    StartPreviewLoop();
                 }
             }
         }
