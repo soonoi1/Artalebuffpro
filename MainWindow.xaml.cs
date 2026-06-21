@@ -335,6 +335,7 @@ namespace ArtaleProBuff
             BitmapSource? bmp = null;
             if (success)
             {
+                int stride = ((regionW * 3) + 3) & ~3;
                 BITMAPINFOHEADER bih = new BITMAPINFOHEADER();
                 bih.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
                 bih.biWidth = regionW;
@@ -342,12 +343,12 @@ namespace ArtaleProBuff
                 bih.biPlanes = 1;
                 bih.biBitCount = 24;
                 bih.biCompression = 0;
-                bih.biSizeImage = (uint)(regionW * regionH * 3);
+                bih.biSizeImage = (uint)(stride * regionH);
                 
                 byte[] buffer = new byte[bih.biSizeImage];
                 GetDIBits(memDC, hbitmap, 0, (uint)regionH, buffer, ref bih, 0);
                 
-                bmp = BitmapSource.Create(regionW, regionH, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, regionW * 3);
+                bmp = BitmapSource.Create(regionW, regionH, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, stride);
                 bmp.Freeze();
             }
             
@@ -1790,6 +1791,7 @@ namespace ArtaleProBuff
             BitmapSource? bmp = null;
             if (success)
             {
+                int stride = ((w * 3) + 3) & ~3;
                 BITMAPINFOHEADER bih = new BITMAPINFOHEADER();
                 bih.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
                 bih.biWidth = w;
@@ -1797,12 +1799,12 @@ namespace ArtaleProBuff
                 bih.biPlanes = 1;
                 bih.biBitCount = 24;
                 bih.biCompression = 0;
-                bih.biSizeImage = (uint)(w * h * 3);
+                bih.biSizeImage = (uint)(stride * h);
                 
                 byte[] buffer = new byte[bih.biSizeImage];
                 GetDIBits(memDC, hbitmap, 0, (uint)h, buffer, ref bih, 0);
                 
-                bmp = BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, w * 3);
+                bmp = BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, stride);
                 bmp.Freeze();
             }
             
@@ -1838,7 +1840,10 @@ namespace ArtaleProBuff
                 Stretch = Stretch.None
             };
             
-            _canvas = new Canvas();
+            _canvas = new Canvas
+            {
+                Background = Brushes.Transparent
+            };
             
             var grid = new Grid();
             grid.Children.Add(image);
