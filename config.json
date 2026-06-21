@@ -1,0 +1,48 @@
+{
+  "global_delay": "1",
+  "bg_enabled": true,
+  "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+  "theme": "light",
+  "exp_enabled": true,
+  "exp_close_game": false,
+  "exp_time": "15",
+  "cards": [
+    {
+      "Key": "a",
+      "IntervalText": "0.01",
+      "FluctuationText": "10",
+      "IsActive": true,
+      "IsLongPress": false,
+      "HoldTimeText": "5.0",
+      "IsExclusive": false
+    },
+    {
+      "Key": "d",
+      "IntervalText": "120",
+      "FluctuationText": "10",
+      "IsActive": true,
+      "IsLongPress": false,
+      "HoldTimeText": "5.0",
+      "IsExclusive": true
+    },
+    {
+      "Key": "s",
+      "IntervalText": "30",
+      "FluctuationText": "10",
+      "IsActive": true,
+      "IsLongPress": false,
+      "HoldTimeText": "5.0",
+      "IsExclusive": true
+    }
+  ],
+  "patrol_groups": [
+    {
+      "IsActive": true,
+      "RightTimeText": "0.1",
+      "LeftTimeText": "0.1",
+      "MidPauseTimeText": "2",
+      "IntervalAfterText": "2"
+    }
+  ],
+  "presets": {}
+}
