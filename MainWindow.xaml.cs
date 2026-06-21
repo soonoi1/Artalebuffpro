@@ -1442,6 +1442,7 @@ namespace ArtaleProBuff
                     writer.WriteBytes(pngBytes);
                     await writer.StoreAsync();
                     await writer.FlushAsync();
+                    writer.DetachStream(); // Detach underlying stream so disposing writer doesn't dispose the stream
                 }
                 
                 randomAccessStream.Seek(0);
