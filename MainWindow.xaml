@@ -245,6 +245,22 @@
                                                     <ui:TextBox Grid.Column="1" Text="{Binding IntervalAfterText, Mode=TwoWay}" Width="80" HorizontalContentAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Status}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                                 </Grid>
+
+                                                <!-- Timed Loop Settings -->
+                                                <Grid Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" Content="定时循环" IsChecked="{Binding IsTimedLoop, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11" />
+                                                    <TextBlock Grid.Column="1" Text="每隔 (秒):" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsEnabled="{Binding IsTimedLoop}"/>
+                                                    <ui:TextBox Grid.Column="2" Text="{Binding LoopIntervalText, Mode=TwoWay}" Width="55" HorizontalContentAlignment="Center" Margin="5,0,15,0" IsEnabled="{Binding IsTimedLoop}"/>
+                                                    <TextBlock Grid.Column="3" Text="单次执行次数:" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsEnabled="{Binding IsTimedLoop}"/>
+                                                    <ui:TextBox Grid.Column="4" Text="{Binding LoopCountText, Mode=TwoWay}" Width="45" HorizontalContentAlignment="Center" HorizontalAlignment="Left" Margin="5,0,0,0" IsEnabled="{Binding IsTimedLoop}"/>
+                                                </Grid>
                                             </StackPanel>
                                         </ui:Card>
                                     </DataTemplate>

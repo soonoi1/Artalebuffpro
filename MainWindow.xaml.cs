@@ -973,7 +973,7 @@ namespace ArtaleProBuff
             }, token);
         }
 
-        private async Task PatrolDelayAsync(string? heldKey, double durationSec, CancellationToken token)
+        private async Task PatrolDelayAsync(string? heldKey, double durationSec, CancellationToken token, bool allowInterrupt)
         {
             double elapsed = 0;
             double step = 0.05; // 50ms resolution
@@ -981,6 +981,15 @@ namespace ArtaleProBuff
             while (elapsed < durationSec)
             {
                 token.ThrowIfCancellationRequested();
+
+                if (allowInterrupt)
+                {
+                    var due = GetDueTimedGroup();
+                    if (due != null)
+                    {
+                        throw new PatrolInterruptException();
+                    }
+                }
 
                 if (_exclusiveCard != null)
                 {
@@ -1006,6 +1015,143 @@ namespace ArtaleProBuff
             }
         }
 
+        private class PatrolInterruptException : Exception { }
+
+        private PatrolGroupViewModel? GetDueTimedGroup()
+        {
+            var now = DateTime.Now;
+            foreach (var g in _patrolGroups)
+            {
+                if (g.IsActive && g.IsTimedLoop)
+                {
+                    if (now >= g.NextRunTime)
+                    {
+                        return g;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private async Task RunDueTimedGroupsAsync(CancellationToken token)
+        {
+            while (true)
+            {
+                var dueGroup = GetDueTimedGroup();
+                if (dueGroup == null) break;
+
+                int loopCount = 1;
+                int.TryParse(dueGroup.LoopCountText, out loopCount);
+                if (loopCount <= 0) loopCount = 1;
+
+                for (int i = 0; i < loopCount; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    
+                    while (_isGloballyPaused && !token.IsCancellationRequested)
+                    {
+                        await Task.Delay(200, token);
+                    }
+                    token.ThrowIfCancellationRequested();
+
+                    dueGroup.Status = $"定时执行 ({i + 1}/{loopCount})";
+                    await RunSingleGroupSequenceAsync(dueGroup, token, allowInterrupt: false);
+                }
+
+                double intervalSec = 30;
+                double.TryParse(dueGroup.LoopIntervalText, out intervalSec);
+                if (intervalSec <= 0) intervalSec = 30;
+
+                dueGroup.NextRunTime = DateTime.Now.AddSeconds(intervalSec);
+                dueGroup.Status = $"等待下次定时";
+            }
+        }
+
+        private async Task RunSingleGroupSequenceAsync(PatrolGroupViewModel g, CancellationToken token, bool allowInterrupt)
+        {
+            Random rand = new Random();
+
+            double rightTime = 0;
+            double.TryParse(g.RightTimeText, out rightTime);
+            double leftTime = 0;
+            double.TryParse(g.LeftTimeText, out leftTime);
+            double midPause = 0;
+            double.TryParse(g.MidPauseTimeText, out midPause);
+            double interval = 0;
+            double.TryParse(g.IntervalAfterText, out interval);
+
+            double fluctPercent = 0;
+            string fluctText = "";
+            UpdateUi(() => fluctText = txtPatrolFluct.Text);
+            double.TryParse(fluctText, out fluctPercent);
+
+            Func<double, double> applyFluct = (val) =>
+            {
+                if (val <= 0 || fluctPercent <= 0) return val;
+                double maxDeviation = val * (fluctPercent / 100.0);
+                double dev = (rand.NextDouble() * 2 - 1) * maxDeviation;
+                double finalVal = val + dev;
+                return finalVal < 0.01 ? 0.01 : finalVal;
+            };
+
+            double actualRightTime = applyFluct(rightTime);
+            double actualLeftTime = applyFluct(leftTime);
+            double actualMidPause = applyFluct(midPause);
+            double actualInterval = applyFluct(interval);
+
+            // 1. Move Right
+            if (actualRightTime > 0)
+            {
+                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                g.Status = $"向右 {actualRightTime:F1}秒";
+                _isPatrolMoving = true;
+                PressKeySafe("right");
+                try
+                {
+                    await PatrolDelayAsync("right", actualRightTime, token, allowInterrupt);
+                }
+                finally
+                {
+                    ReleaseKeySafe("right");
+                    _isPatrolMoving = false;
+                }
+            }
+
+            // 2. Mid Pause
+            if (actualMidPause > 0)
+            {
+                g.Status = $"暂停 {actualMidPause:F1}秒";
+                await PatrolDelayAsync(null, actualMidPause, token, allowInterrupt);
+            }
+
+            // 3. Move Left
+            if (actualLeftTime > 0)
+            {
+                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                g.Status = $"向左 {actualLeftTime:F1}秒";
+                _isPatrolMoving = true;
+                PressKeySafe("left");
+                try
+                {
+                    await PatrolDelayAsync("left", actualLeftTime, token, allowInterrupt);
+                }
+                finally
+                {
+                    ReleaseKeySafe("left");
+                    _isPatrolMoving = false;
+                }
+            }
+
+            // 4. Group Interval
+            if (actualInterval > 0)
+            {
+                g.Status = $"组后停留 {actualInterval:F1}秒";
+                await PatrolDelayAsync(null, actualInterval, token, allowInterrupt);
+            }
+
+            g.Status = g.IsTimedLoop ? "等待下次定时" : "等待下次循环";
+        }
+
         private void StartPatrolLogic()
         {
             if (_patrolCts != null)
@@ -1018,11 +1164,28 @@ namespace ArtaleProBuff
 
             txtPatrolStatus.Text = "运行中";
 
+            // Initialize next run times for active timed groups
+            var now = DateTime.Now;
+            foreach (var g in _patrolGroups)
+            {
+                if (g.IsActive && g.IsTimedLoop)
+                {
+                    double intervalSec = 30;
+                    double.TryParse(g.LoopIntervalText, out intervalSec);
+                    if (intervalSec <= 0) intervalSec = 30;
+                    g.NextRunTime = now.AddSeconds(intervalSec);
+                    g.Status = $"已排程 ({intervalSec}秒)";
+                }
+                else
+                {
+                    g.Status = "等待运行";
+                }
+            }
+
             Task.Run(async () =>
             {
                 try
                 {
-                    Random rand = new Random();
                     while (!token.IsCancellationRequested)
                     {
                         if (_isGloballyPaused)
@@ -1032,92 +1195,45 @@ namespace ArtaleProBuff
                             continue;
                         }
 
-                        var activeGroups = _patrolGroups.Where(g => g.IsActive).ToList();
-                        if (activeGroups.Count == 0)
+                        // 1. Check and run any due timed groups
+                        await RunDueTimedGroupsAsync(token);
+
+                        // 2. Get active base groups (non-timed loops)
+                        var baseGroups = _patrolGroups.Where(g => g.IsActive && !g.IsTimedLoop).ToList();
+                        if (baseGroups.Count == 0)
                         {
-                            UpdateUi(() => txtPatrolStatus.Text = "无启用组，等待中...");
-                            await Task.Delay(1000, token);
+                            UpdateUi(() => txtPatrolStatus.Text = "仅定时组，等待中...");
+                            await Task.Delay(500, token);
                             continue;
                         }
 
-                        foreach (var g in activeGroups)
+                        // Run base groups sequentially
+                        foreach (var bg in baseGroups)
                         {
                             token.ThrowIfCancellationRequested();
-                            
                             while (_isGloballyPaused && !token.IsCancellationRequested)
                             {
                                 await Task.Delay(200, token);
                             }
                             token.ThrowIfCancellationRequested();
 
-                            double rightTime = 0;
-                            double.TryParse(g.RightTimeText, out rightTime);
-                            double leftTime = 0;
-                            double.TryParse(g.LeftTimeText, out leftTime);
-                            double midPause = 0;
-                            double.TryParse(g.MidPauseTimeText, out midPause);
-                            double interval = 0;
-                            double.TryParse(g.IntervalAfterText, out interval);
-
-                            double fluctPercent = 0;
-                            string fluctText = "";
-                            UpdateUi(() => fluctText = txtPatrolFluct.Text);
-                            double.TryParse(fluctText, out fluctPercent);
-
-                            // Apply fluctuations
-                            Func<double, double> applyFluct = (val) =>
+                            try
                             {
-                                if (val <= 0 || fluctPercent <= 0) return val;
-                                double maxDeviation = val * (fluctPercent / 100.0);
-                                double dev = (rand.NextDouble() * 2 - 1) * maxDeviation;
-                                double finalVal = val + dev;
-                                return finalVal < 0.01 ? 0.01 : finalVal;
-                            };
-
-                            double actualRightTime = applyFluct(rightTime);
-                            double actualLeftTime = applyFluct(leftTime);
-                            double actualMidPause = applyFluct(midPause);
-                            double actualInterval = applyFluct(interval);
-
-                            // 1. Move Right
-                            if (actualRightTime > 0)
+                                await RunSingleGroupSequenceAsync(bg, token, allowInterrupt: true);
+                            }
+                            catch (PatrolInterruptException)
                             {
-                                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                                g.Status = $"向右 {actualRightTime:F1}秒";
-                                _isPatrolMoving = true;
-                                PressKeySafe("right");
-                                await PatrolDelayAsync("right", actualRightTime, token);
+                                // Interrupted! Clean up (already handled by finally, but ensure keys released)
                                 ReleaseKeySafe("right");
-                                _isPatrolMoving = false;
-                            }
-
-                            // 2. Mid Pause
-                            if (actualMidPause > 0)
-                            {
-                                g.Status = $"暂停 {actualMidPause:F1}秒";
-                                await PatrolDelayAsync(null, actualMidPause, token);
-                            }
-
-                            // 3. Move Left
-                            if (actualLeftTime > 0)
-                            {
-                                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                                g.Status = $"向左 {actualLeftTime:F1}秒";
-                                _isPatrolMoving = true;
-                                PressKeySafe("left");
-                                await PatrolDelayAsync("left", actualLeftTime, token);
                                 ReleaseKeySafe("left");
                                 _isPatrolMoving = false;
-                            }
 
-                            // 4. Group Interval
-                            if (actualInterval > 0)
-                            {
-                                g.Status = $"组后停留 {actualInterval:F1}秒";
-                                await PatrolDelayAsync(null, actualInterval, token);
-                            }
+                                // Run due timed groups immediately
+                                await RunDueTimedGroupsAsync(token);
 
-                            g.Status = "等待下次循环";
+                                // Break current base group loop to restart sequence
+                                break;
+                            }
                         }
                     }
                 }
@@ -1133,7 +1249,10 @@ namespace ArtaleProBuff
                     _isPatrolMoving = false;
                     ReleaseKeySafe("right");
                     ReleaseKeySafe("left");
-                    foreach (var g in _patrolGroups) g.Status = "等待运行";
+                    foreach (var g in _patrolGroups)
+                    {
+                        g.Status = "已停止";
+                    }
                 }
             }, token);
         }

@@ -11,8 +11,13 @@ namespace ArtaleProBuff
         private string _midPauseTimeText = "0.0";
         private string _intervalAfterText = "5.0";
         
+        private bool _isTimedLoop = false;
+        private string _loopIntervalText = "30";
+        private string _loopCountText = "1";
+        
         // Runtime UI state
         private string _status = "等待运行";
+        private DateTime _nextRunTime = DateTime.MinValue;
 
         public bool IsActive
         {
@@ -42,6 +47,31 @@ namespace ArtaleProBuff
         {
             get => _intervalAfterText;
             set => SetField(ref _intervalAfterText, value);
+        }
+
+        public bool IsTimedLoop
+        {
+            get => _isTimedLoop;
+            set => SetField(ref _isTimedLoop, value);
+        }
+
+        public string LoopIntervalText
+        {
+            get => _loopIntervalText;
+            set => SetField(ref _loopIntervalText, value);
+        }
+
+        public string LoopCountText
+        {
+            get => _loopCountText;
+            set => SetField(ref _loopCountText, value);
+        }
+
+        [JsonIgnore]
+        public DateTime NextRunTime
+        {
+            get => _nextRunTime;
+            set => _nextRunTime = value;
         }
 
         [JsonIgnore]
