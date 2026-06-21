@@ -14,5 +14,13 @@
    <ItemGroup>
      <PackageReference Include="WPF-UI" Version="4.3.0" />
    </ItemGroup>
+
+   <ItemGroup>
+     <!-- Exclude ActivationGenerator folder from main project compilation -->
+     <Compile Remove="ActivationGenerator\**" />
+     <EmbeddedResource Remove="ActivationGenerator\**" />
+     <None Remove="ActivationGenerator\**" />
+     <Page Remove="ActivationGenerator\**" />
+   </ItemGroup>
  
  </Project>

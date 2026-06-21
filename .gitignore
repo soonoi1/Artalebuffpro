@@ -1,0 +1,26 @@
+# Build and Release Folders
+bin/
+obj/
+publish_out/
+build/
+dist/
+__pycache__/
+bake/
+.vs/
+.idea/
+
+# User-specific or local configuration files
+license.lic
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Backups and temporary files
+*.bak
+*.tmp
+*.log
+*.pdb
+
+# PyInstaller files (except source script if needed)
+# *.spec

@@ -442,6 +442,7 @@ namespace ArtaleProBuff
         private int _cropW = 0;
         private int _cropH = 0;
         private double? _lastParsedExp = null;
+        private double? _initialExpValue = null;
         private readonly List<(DateTime Time, double Value)> _expHistory = new List<(DateTime Time, double Value)>();
         
         private IntPtr _hwnd = IntPtr.Zero;
@@ -1149,12 +1150,14 @@ namespace ArtaleProBuff
 
             txtExpStatus.Text = "启动中...";
             _lastParsedExp = null;
+            _initialExpValue = null;
             _expHistory.Clear();
             
             UpdateUi(() => {
                 txtExpOcrText.Text = "准备识别...";
                 txtExpRateMin.Text = "0.00%";
                 txtExpRate10Min.Text = "0.00%";
+                txtExpTotalGained.Text = "0.00%";
             });
 
             Task.Run(async () =>
@@ -1208,6 +1211,13 @@ namespace ArtaleProBuff
                         if (currentVal.HasValue)
                         {
                             var now = DateTime.Now;
+                            if (!_initialExpValue.HasValue)
+                            {
+                                _initialExpValue = currentVal.Value;
+                            }
+                            double totalGained = currentVal.Value - _initialExpValue.Value;
+                            if (totalGained < 0) totalGained = 0;
+
                             _expHistory.Add((now, currentVal.Value));
                             _expHistory.RemoveAll(x => (now - x.Time).TotalMinutes > 11);
 
@@ -1261,11 +1271,13 @@ namespace ArtaleProBuff
                                 {
                                     txtExpRateMin.Text = $"+{rateMin:F4}%";
                                     txtExpRate10Min.Text = $"+{rate10Min:F4}%";
+                                    txtExpTotalGained.Text = $"+{totalGained:F4}%";
                                 }
                                 else
                                 {
                                     txtExpRateMin.Text = $"+{rateMin:F1}";
                                     txtExpRate10Min.Text = $"+{rate10Min:F1}";
+                                    txtExpTotalGained.Text = $"+{totalGained:F1}";
                                 }
                             });
 

@@ -6,19 +6,23 @@
   "exp_enabled": true,
   "exp_close_game": false,
   "exp_time": "15",
+  "exp_crop_x": 0,
+  "exp_crop_y": 0,
+  "exp_crop_w": 0,
+  "exp_crop_h": 0,
   "cards": [
     {
       "Key": "a",
-      "IntervalText": "0.01",
-      "FluctuationText": "10",
+      "IntervalText": "0",
+      "FluctuationText": "50",
       "IsActive": true,
-      "IsLongPress": false,
-      "HoldTimeText": "5.0",
+      "IsLongPress": true,
+      "HoldTimeText": "0.01",
       "IsExclusive": false
     },
     {
       "Key": "d",
-      "IntervalText": "120",
+      "IntervalText": "200",
       "FluctuationText": "10",
       "IsActive": true,
       "IsLongPress": false,
@@ -27,7 +31,7 @@
     },
     {
       "Key": "s",
-      "IntervalText": "30",
+      "IntervalText": "10",
       "FluctuationText": "10",
       "IsActive": true,
       "IsLongPress": false,
@@ -42,7 +46,76 @@
       "LeftTimeText": "0.1",
       "MidPauseTimeText": "2",
       "IntervalAfterText": "2"
+    },
+    {
+      "IsActive": true,
+      "RightTimeText": "0.3",
+      "LeftTimeText": "0.1",
+      "MidPauseTimeText": "0.0",
+      "IntervalAfterText": "2"
     }
   ],
-  "presets": {}
+  "patrol_pause_others": false,
+  "patrol_fluct": "10",
+  "presets": {
+    "\u5F13_\u86CB\u9F99": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": true,
+      "exp_close_game": false,
+      "exp_time": "15",
+      "exp_crop_x": 0,
+      "exp_crop_y": 0,
+      "exp_crop_w": 0,
+      "exp_crop_h": 0,
+      "cards": [
+        {
+          "Key": "a",
+          "IntervalText": "0",
+          "FluctuationText": "50",
+          "IsActive": true,
+          "IsLongPress": true,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "d",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "s",
+          "IntervalText": "10",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.1",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "2",
+          "IntervalAfterText": "2"
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "0.3",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "2"
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "10"
+    }
+  }
 }

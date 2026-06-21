@@ -1,0 +1,59 @@
+<ui:FluentWindow x:Class="ArtaleProBuff.ActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="软件激活 - ArtaleProBuff" Height="280" Width="420"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        Background="{DynamicResource ApplicationBackgroundBrush}">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,10,0,15">
+            <TextBlock Text="🔑 软件激活" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="此软件已受机器码绑定保护，请联系作者获取激活码。" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Machine Code Field -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="您的机器码 (请复制发给作者):" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
+                <ui:TextBox x:Name="txtMachineCode" IsReadOnly="True" Text="获取中..." />
+            </StackPanel>
+            <ui:Button Grid.Column="1" x:Name="btnCopy" Content="复制" Click="BtnCopy_Click" VerticalAlignment="Bottom" Margin="10,0,0,0" Width="60" />
+        </Grid>
+
+        <!-- Activation Code Field -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,15">
+            <TextBlock Text="输入激活码:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
+            <ui:TextBox x:Name="txtActivationCode" PlaceholderText="在此粘贴激活码..." Height="35" />
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ui:Button Grid.Column="0" x:Name="btnActivate" Content="激活软件" Click="BtnActivate_Click" Appearance="Primary" Margin="0,0,5,0" />
+            <ui:Button Grid.Column="1" x:Name="btnCancel" Content="退出" Click="BtnCancel_Click" Margin="5,0,0,0" />
+        </Grid>
+
+        <!-- Status Message -->
+        <TextBlock Grid.Row="4" x:Name="txtStatus" Text="" FontSize="11" Foreground="Red" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,0"/>
+    </Grid>
+</ui:FluentWindow>

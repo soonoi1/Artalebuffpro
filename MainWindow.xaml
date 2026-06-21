@@ -369,6 +369,7 @@
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
                                                     <StackPanel Grid.Column="0">
                                                         <TextBlock Text="每分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
@@ -377,6 +378,10 @@
                                                     <StackPanel Grid.Column="1">
                                                         <TextBlock Text="每 10 分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                         <TextBlock x:Name="txtExpRate10Min" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="累计增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                        <TextBlock x:Name="txtExpTotalGained" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </StackPanel>
