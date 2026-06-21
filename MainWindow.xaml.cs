@@ -131,6 +131,8 @@ namespace ArtaleProBuff
         private static extern IntPtr GetDC(IntPtr hWnd);
         [DllImport("user32.dll")]
         private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBmp, uint nFlags);
         [DllImport("user32.dll")]
         private static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")]
@@ -330,7 +332,35 @@ namespace ArtaleProBuff
             IntPtr hbitmap = CreateCompatibleBitmap(clientDC, regionW, regionH);
             IntPtr oldBmp = SelectObject(memDC, hbitmap);
             
-            bool success = BitBlt(memDC, 0, 0, regionW, regionH, clientDC, x1, y1, 0x00CC0020);
+            bool success = false;
+            try
+            {
+                // Create a temporary full-size DC/Bitmap to capture via PrintWindow
+                IntPtr fullMemDC = CreateCompatibleDC(clientDC);
+                IntPtr hFullBmp = CreateCompatibleBitmap(clientDC, w, h);
+                IntPtr oldFullBmp = SelectObject(fullMemDC, hFullBmp);
+                
+                // PW_CLIENTONLY = 1, PW_RENDERFULLCONTENT = 2. Combined = 3.
+                if (PrintWindow(hwnd, fullMemDC, 3))
+                {
+                    // Crop the specific region from the captured full client area
+                    success = BitBlt(memDC, 0, 0, regionW, regionH, fullMemDC, x1, y1, 0x00CC0020);
+                }
+                
+                SelectObject(fullMemDC, oldFullBmp);
+                DeleteObject(hFullBmp);
+                DeleteDC(fullMemDC);
+            }
+            catch
+            {
+                success = false;
+            }
+            
+            // Fallback to direct BitBlt if PrintWindow fails
+            if (!success)
+            {
+                success = BitBlt(memDC, 0, 0, regionW, regionH, clientDC, x1, y1, 0x00CC0020);
+            }
             
             BitmapSource? bmp = null;
             if (success)
@@ -1887,7 +1917,22 @@ namespace ArtaleProBuff
             IntPtr hbitmap = CreateCompatibleBitmap(clientDC, w, h);
             IntPtr oldBmp = SelectObject(memDC, hbitmap);
             
-            bool success = BitBlt(memDC, 0, 0, w, h, clientDC, 0, 0, 0x00CC0020);
+            bool success = false;
+            try
+            {
+                // Try capturing using PrintWindow
+                success = PrintWindow(hwnd, memDC, 3);
+            }
+            catch
+            {
+                success = false;
+            }
+            
+            // Fallback to direct BitBlt if PrintWindow fails
+            if (!success)
+            {
+                success = BitBlt(memDC, 0, 0, w, h, clientDC, 0, 0, 0x00CC0020);
+            }
             
             BitmapSource? bmp = null;
             if (success)
