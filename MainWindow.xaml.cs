@@ -1200,7 +1200,7 @@ namespace ArtaleProBuff
 
                         // Perform OCR on the cropped bitmap
                         string ocrText = await OcrBitmapAsync(bmp);
-                        UpdateUi(() => txtExpOcrText.Text = string.IsNullOrWhiteSpace(ocrText) ? "未识别到字符" : ocrText);
+                        UpdateUi(() => txtExpOcrText.Text = GetFriendlyOcrDisplay(ocrText));
 
                         double? currentVal = ParseExpValue(ocrText);
                         bool changed = false;
@@ -1360,8 +1360,8 @@ namespace ArtaleProBuff
 
         private static double? ParseExpValue(string text)
         {
+            if (string.IsNullOrWhiteSpace(text) || text.Contains("__ERROR_")) return null;
             string sanitized = SanitizeOcrText(text);
-            if (string.IsNullOrWhiteSpace(sanitized)) return null;
             
             // Look for percentage first, e.g. "99.82%" or "12.3%"
             var percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+[\.,]\d+)\s*%");
@@ -1397,14 +1397,38 @@ namespace ArtaleProBuff
             return null;
         }
 
+        private static string GetFriendlyOcrDisplay(string ocrText)
+        {
+            if (string.IsNullOrWhiteSpace(ocrText) || ocrText == "未识别到字符")
+            {
+                return "未识别到字符";
+            }
+            if (ocrText == "__ERROR_NO_OCR_ENGINE__")
+            {
+                return "未识别到字符 (未检测到系统 OCR 语言包，请在 Windows 设置中添加语言)";
+            }
+            if (ocrText.StartsWith("__ERROR_OCR_EXCEPTION__: "))
+            {
+                return $"未识别到字符 ({ocrText.Substring("__ERROR_OCR_EXCEPTION__: ".Length)})";
+            }
+            return ocrText;
+        }
+
         private static async Task<string> OcrBitmapAsync(BitmapSource bitmapSource)
         {
             try
             {
-                // Convert BitmapSource to PNG byte array
+                // Scale up the bitmap to satisfy Windows OcrEngine's minimum 40px requirement
+                // and to dramatically improve text recognition accuracy on small fonts.
+                double scale = 3.0;
+                var scaleTransform = new ScaleTransform(scale, scale);
+                var scaledBitmap = new TransformedBitmap(bitmapSource, scaleTransform);
+                scaledBitmap.Freeze();
+
+                // Convert scaled BitmapSource to PNG byte array
                 byte[] pngBytes;
                 var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+                encoder.Frames.Add(BitmapFrame.Create(scaledBitmap));
                 using (var ms = new MemoryStream())
                 {
                     encoder.Save(ms);
@@ -1436,12 +1460,16 @@ namespace ArtaleProBuff
                     var result = await engine.RecognizeAsync(softwareBitmap);
                     return result.Text;
                 }
+                else
+                {
+                    return "__ERROR_NO_OCR_ENGINE__";
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"OCR error: {ex.Message}");
+                return $"__ERROR_OCR_EXCEPTION__: {ex.Message}";
             }
-            return string.Empty;
         }
 
         private CancellationTokenSource? _previewCts = null;
@@ -1472,9 +1500,9 @@ namespace ArtaleProBuff
                                 UpdateUi(() =>
                                 {
                                     imgExpRegion.Source = bmp;
-                                    if (string.IsNullOrWhiteSpace(ocrText))
+                                    if (string.IsNullOrWhiteSpace(ocrText) || ocrText.StartsWith("__ERROR_"))
                                     {
-                                        txtExpOcrText.Text = "未识别到字符";
+                                        txtExpOcrText.Text = GetFriendlyOcrDisplay(ocrText);
                                     }
                                     else
                                     {
