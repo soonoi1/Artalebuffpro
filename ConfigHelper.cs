@@ -13,6 +13,10 @@ namespace ArtaleProBuff
         public bool exp_enabled { get; set; }
         public bool exp_close_game { get; set; }
         public string exp_time { get; set; }
+        public int exp_crop_x { get; set; }
+        public int exp_crop_y { get; set; }
+        public int exp_crop_w { get; set; }
+        public int exp_crop_h { get; set; }
         public List<BuffCardViewModel> cards { get; set; }
         public List<PatrolGroupViewModel> patrol_groups { get; set; }
         public bool patrol_pause_others { get; set; }
@@ -28,6 +32,10 @@ namespace ArtaleProBuff
         public bool exp_enabled { get; set; } = false;
         public bool exp_close_game { get; set; } = false;
         public string exp_time { get; set; } = "15";
+        public int exp_crop_x { get; set; } = 0;
+        public int exp_crop_y { get; set; } = 0;
+        public int exp_crop_w { get; set; } = 0;
+        public int exp_crop_h { get; set; } = 0;
         public List<BuffCardViewModel> cards { get; set; } = new List<BuffCardViewModel>();
         public List<PatrolGroupViewModel> patrol_groups { get; set; } = new List<PatrolGroupViewModel>();
         public bool patrol_pause_others { get; set; } = true;

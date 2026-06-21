@@ -316,7 +316,7 @@
                     <ScrollViewer x:Name="SettingsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                         <StackPanel local:StackPanelHelper.Spacing="10">
                             <!-- Theme selector -->
-                            <ui:Card Padding="12">
+                             <ui:Card Padding="12">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -338,10 +338,49 @@
                                     <StackPanel x:Name="panelExpFields" local:StackPanelHelper.Spacing="10">
                                         <ui:ToggleSwitch x:Name="switchExpCloseGame" Content="超时强制物理关闭游戏窗口 (防封号强退)" />
 
-                                        <StackPanel>
-                                            <TextBlock Text="超时判定时间阈值 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                            <ui:TextBox x:Name="txtExpTimeout" Text="15" Width="100" HorizontalAlignment="Left" />
-                                        </StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="超时判定时间阈值 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
+                                                <ui:TextBox x:Name="txtExpTimeout" Text="15" Width="100" HorizontalAlignment="Left" />
+                                            </StackPanel>
+                                            <ui:Button Grid.Column="1" Content="选择经验值监控区域" Icon="{ui:SymbolIcon Crop24}" Click="BtnSelectExpRegion_Click" VerticalAlignment="Bottom" Appearance="Primary" />
+                                        </Grid>
+
+                                        <!-- Real-time monitoring area -->
+                                        <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                            <StackPanel local:StackPanelHelper.Spacing="8">
+                                                <!-- 1. Live screen -->
+                                                <TextBlock Text="实时监控画面 (所选区域):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                <Border BorderBrush="{DynamicResource SystemAccentColorBrush}" BorderThickness="1" HorizontalAlignment="Left" Background="Black" CornerRadius="2" Padding="2">
+                                                    <Image x:Name="imgExpRegion" Width="220" Height="40" Stretch="Uniform" />
+                                                </Border>
+
+                                                <!-- 2. OCR text -->
+                                                <TextBlock Text="识别到的经验值文本:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                <TextBlock x:Name="txtExpOcrText" Text="未识别到数据" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                                <!-- 3. Growth rate -->
+                                                <TextBlock Text="经验增长速度分析:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="每分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                        <TextBlock x:Name="txtExpRateMin" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="每 10 分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                        <TextBlock x:Name="txtExpRate10Min" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
                                     </StackPanel>
 
                                     <!-- Status -->

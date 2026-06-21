@@ -11,6 +11,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
@@ -291,7 +295,7 @@ namespace ArtaleProBuff
             return foundHwnd;
         }
 
-        private static byte[] CaptureExpRegion(IntPtr hwnd)
+        private static BitmapSource? CaptureExpRegion(IntPtr hwnd, int cropX, int cropY, int cropW, int cropH)
         {
             if (IsIconic(hwnd)) return null;
             if (!GetClientRect(hwnd, out RECT rect)) return null;
@@ -300,13 +304,23 @@ namespace ArtaleProBuff
             int h = rect.Bottom - rect.Top;
             if (w <= 0 || h <= 0) return null;
             
-            int x1 = (int)(0.533 * w);
-            int x2 = (int)(0.665 * w);
-            int y1 = (int)(0.931 * h);
-            int y2 = (int)(0.994 * h);
+            int x1, y1, regionW, regionH;
+            if (cropW > 0 && cropH > 0)
+            {
+                x1 = cropX;
+                y1 = cropY;
+                regionW = cropW;
+                regionH = cropH;
+            }
+            else
+            {
+                // Fallback to default MapleStory Worlds experience region (53.3% to 66.5% width, 93.1% to 99.4% height)
+                x1 = (int)(0.533 * w);
+                y1 = (int)(0.931 * h);
+                regionW = (int)(0.665 * w) - x1;
+                regionH = (int)(0.994 * h) - y1;
+            }
             
-            int regionW = x2 - x1;
-            int regionH = y2 - y1;
             if (regionW <= 0 || regionH <= 0) return null;
             
             IntPtr clientDC = GetDC(hwnd);
@@ -318,7 +332,7 @@ namespace ArtaleProBuff
             
             bool success = BitBlt(memDC, 0, 0, regionW, regionH, clientDC, x1, y1, 0x00CC0020);
             
-            byte[] buffer = null;
+            BitmapSource? bmp = null;
             if (success)
             {
                 BITMAPINFOHEADER bih = new BITMAPINFOHEADER();
@@ -330,8 +344,11 @@ namespace ArtaleProBuff
                 bih.biCompression = 0;
                 bih.biSizeImage = (uint)(regionW * regionH * 3);
                 
-                buffer = new byte[bih.biSizeImage];
+                byte[] buffer = new byte[bih.biSizeImage];
                 GetDIBits(memDC, hbitmap, 0, (uint)regionH, buffer, ref bih, 0);
+                
+                bmp = BitmapSource.Create(regionW, regionH, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, regionW * 3);
+                bmp.Freeze();
             }
             
             SelectObject(memDC, oldBmp);
@@ -339,7 +356,7 @@ namespace ArtaleProBuff
             DeleteDC(memDC);
             ReleaseDC(hwnd, clientDC);
             
-            return buffer;
+            return bmp;
         }
 
         private static void CloseTargetWindow(IntPtr hwnd)
@@ -387,6 +404,14 @@ namespace ArtaleProBuff
         // 巡逻移动中暂停其他技能（巡逻移动中为true，且开启了chkPatrolPauseOthers）
         private volatile bool _isPatrolMoving = false;
         private volatile bool _shouldPauseOthersDuringPatrol = false;
+        
+        // 经验监测的裁剪区域 (0表示默认位置)
+        private int _cropX = 0;
+        private int _cropY = 0;
+        private int _cropW = 0;
+        private int _cropH = 0;
+        private double? _lastParsedExp = null;
+        private readonly List<(DateTime Time, double Value)> _expHistory = new List<(DateTime Time, double Value)>();
         
         private IntPtr _hwnd = IntPtr.Zero;
         private HwndSource _hwndSource = null;
@@ -488,6 +513,11 @@ namespace ArtaleProBuff
             switchExpCloseGame.IsChecked = _config.exp_close_game;
             txtExpTimeout.Text = _config.exp_time;
             
+            _cropX = _config.exp_crop_x;
+            _cropY = _config.exp_crop_y;
+            _cropW = _config.exp_crop_w;
+            _cropH = _config.exp_crop_h;
+            
             chkPatrolPauseOthers.IsChecked = _config.patrol_pause_others;
             txtPatrolFluct.Text = _config.patrol_fluct;
             
@@ -542,6 +572,11 @@ namespace ArtaleProBuff
             _config.exp_enabled = switchExpMonitor.IsChecked == true;
             _config.exp_close_game = switchExpCloseGame.IsChecked == true;
             _config.exp_time = txtExpTimeout.Text.Trim();
+            
+            _config.exp_crop_x = _cropX;
+            _config.exp_crop_y = _cropY;
+            _config.exp_crop_w = _cropW;
+            _config.exp_crop_h = _cropH;
             
             _config.patrol_pause_others = chkPatrolPauseOthers.IsChecked == true;
             _config.patrol_fluct = txtPatrolFluct.Text.Trim();
@@ -1073,108 +1108,162 @@ namespace ArtaleProBuff
             var token = _expCts.Token;
 
             txtExpStatus.Text = "启动中...";
+            _lastParsedExp = null;
+            _expHistory.Clear();
+            
+            UpdateUi(() => {
+                txtExpOcrText.Text = "准备识别...";
+                txtExpRateMin.Text = "0.00%";
+                txtExpRate10Min.Text = "0.00%";
+            });
 
             Task.Run(async () =>
             {
-                byte[]? prevBuffer = null;
                 int staticSec = 0;
 
                 try
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        await Task.Delay(1000, token);
+                        await Task.Delay(1500, token); // 1.5 seconds intervals for OCR and UI performance
 
                         IntPtr hwnd = GetTargetHwnd();
                         if (hwnd == IntPtr.Zero)
                         {
                             UpdateUi(() => txtExpStatus.Text = "未找到目标窗口");
-                            staticSec = 0;
+                            staticSec++;
+                            if (staticSec >= expTimeout)
+                            {
+                                HandleExpTimeout(hwnd);
+                                break;
+                            }
                             continue;
                         }
 
                         if (IsIconic(hwnd))
                         {
                             UpdateUi(() => txtExpStatus.Text = "窗口最小化 (暂停计数)");
+                            staticSec = 0; // pause timeout check while iconic
+                            continue;
+                        }
+
+                        BitmapSource? bmp = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
+                        if (bmp == null)
+                        {
+                            UpdateUi(() => txtExpStatus.Text = "捕获画面失败 (暂停计数)");
                             staticSec = 0;
                             continue;
                         }
 
-                        byte[]? currentBuffer = CaptureExpRegion(hwnd);
-                        if (currentBuffer == null)
-                        {
-                            UpdateUi(() => txtExpStatus.Text = "捕获失败 (暂停计数)");
-                            staticSec = 0;
-                            continue;
-                        }
+                        // Update live crop display in UI thread
+                        UpdateUi(() => imgExpRegion.Source = bmp);
 
-                        bool isAllBlack = true;
-                        for (int i = 0; i < currentBuffer.Length; i++)
+                        // Perform OCR on the cropped bitmap
+                        string ocrText = await OcrBitmapAsync(bmp);
+                        UpdateUi(() => txtExpOcrText.Text = string.IsNullOrWhiteSpace(ocrText) ? "未识别到字符" : ocrText);
+
+                        double? currentVal = ParseExpValue(ocrText);
+                        bool changed = false;
+
+                        if (currentVal.HasValue)
                         {
-                            if (currentBuffer[i] != 0)
+                            var now = DateTime.Now;
+                            _expHistory.Add((now, currentVal.Value));
+                            _expHistory.RemoveAll(x => (now - x.Time).TotalMinutes > 11);
+
+                            // Calculate growth rates
+                            double rateMin = 0;
+                            double rate10Min = 0;
+                            if (_expHistory.Count > 1)
                             {
-                                isAllBlack = false;
-                                break;
-                            }
-                        }
-
-                        if (isAllBlack)
-                        {
-                            UpdateUi(() => txtExpStatus.Text = "黑屏加载中 (暂停计数)");
-                            staticSec = 0;
-                            continue;
-                        }
-
-                        if (prevBuffer != null)
-                        {
-                            bool equal = AreBuffersEqual(prevBuffer, currentBuffer);
-                            if (equal)
-                            {
-                                staticSec++;
-                                UpdateUi(() => txtExpStatus.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)");
-
-                                if (staticSec >= expTimeout)
+                                var oldest = _expHistory[0];
+                                double elapsedMin = (now - oldest.Time).TotalMinutes;
+                                if (elapsedMin > 0.05)
                                 {
-                                    bool closeGame = false;
-                                    UpdateUi(() => closeGame = switchExpCloseGame.IsChecked == true);
-                                    
-                                    if (closeGame)
+                                    // 1-minute rate
+                                    if (elapsedMin < 1.0)
                                     {
-                                        UpdateUi(() => txtExpStatus.Text = "🚨 超时！已强制关闭游戏");
-                                        UpdateUi(() => StopAll());
-                                        CloseTargetWindow(hwnd);
+                                        double diff = currentVal.Value - oldest.Value;
+                                        if (diff < 0) diff = 0;
+                                        rateMin = diff / elapsedMin;
                                     }
                                     else
                                     {
-                                        _isGloballyPaused = true;
-                                        // 释放当前可能按住的移动键和独占键
-                                        ReleaseKeySafe("right");
-                                        ReleaseKeySafe("left");
-                                        if (_exclusiveCard != null)
-                                        {
-                                            ReleaseKeySafe(_exclusiveCard.Key);
-                                        }
-                                        UpdateUi(() => txtExpStatus.Text = "🚨 经验停滞超时，已暂停所有按键！");
+                                        var target = now.AddMinutes(-1);
+                                        var point = _expHistory.OrderBy(x => Math.Abs((x.Time - target).TotalSeconds)).First();
+                                        double diff = currentVal.Value - point.Value;
+                                        if (diff < 0) diff = 0;
+                                        rateMin = diff;
                                     }
-                                    break;
+
+                                    // 10-minute rate
+                                    if (elapsedMin < 10.0)
+                                    {
+                                        double diff = currentVal.Value - oldest.Value;
+                                        if (diff < 0) diff = 0;
+                                        rate10Min = (diff / elapsedMin) * 10;
+                                    }
+                                    else
+                                    {
+                                        var target = now.AddMinutes(-10);
+                                        var point = _expHistory.OrderBy(x => Math.Abs((x.Time - target).TotalSeconds)).First();
+                                        double diff = currentVal.Value - point.Value;
+                                        if (diff < 0) diff = 0;
+                                        rate10Min = diff;
+                                    }
+                                }
+                            }
+
+                            // Update growth rate display on UI
+                            bool isPercent = ocrText.Contains("%");
+                            UpdateUi(() => {
+                                if (isPercent)
+                                {
+                                    txtExpRateMin.Text = $"+{rateMin:F4}%";
+                                    txtExpRate10Min.Text = $"+{rate10Min:F4}%";
+                                }
+                                else
+                                {
+                                    txtExpRateMin.Text = $"+{rateMin:F1}";
+                                    txtExpRate10Min.Text = $"+{rate10Min:F1}";
+                                }
+                            });
+
+                            if (_lastParsedExp.HasValue)
+                            {
+                                if (currentVal.Value != _lastParsedExp.Value)
+                                {
+                                    changed = true;
+                                    _lastParsedExp = currentVal;
                                 }
                             }
                             else
                             {
-                                staticSec = 0;
-                                if (_isGloballyPaused)
-                                {
-                                    _isGloballyPaused = false;
-                                }
-                                UpdateUi(() => txtExpStatus.Text = "正常运行 (经验变动中)");
+                                _lastParsedExp = currentVal;
+                                changed = true;
                             }
+                        }
+
+                        if (changed)
+                        {
+                            staticSec = 0;
+                            if (_isGloballyPaused)
+                            {
+                                _isGloballyPaused = false;
+                            }
+                            UpdateUi(() => txtExpStatus.Text = "正常运行 (经验变动中)");
                         }
                         else
                         {
-                            UpdateUi(() => txtExpStatus.Text = "已连接 (开始监测)");
-                        }
+                            staticSec += 2; // Incremented by 2 because delay is 1.5s (approx 1.5s intervals)
+                            UpdateUi(() => txtExpStatus.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)");
 
-                        prevBuffer = currentBuffer;
+                            if (staticSec >= expTimeout)
+                            {
+                                HandleExpTimeout(hwnd);
+                                break;
+                            }
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -1188,15 +1277,107 @@ namespace ArtaleProBuff
             }, token);
         }
 
-        private static bool AreBuffersEqual(byte[]? b1, byte[]? b2)
+        private void HandleExpTimeout(IntPtr hwnd)
         {
-            if (b1 == null || b2 == null) return false;
-            if (b1.Length != b2.Length) return false;
-            for (int i = 0; i < b1.Length; i++)
+            bool closeGame = false;
+            UpdateUi(() => closeGame = switchExpCloseGame.IsChecked == true);
+
+            if (closeGame)
             {
-                if (b1[i] != b2[i]) return false;
+                UpdateUi(() => txtExpStatus.Text = "🚨 超时！已强制关闭游戏");
+                UpdateUi(() => StopAll());
+                CloseTargetWindow(hwnd);
             }
-            return true;
+            else
+            {
+                _isGloballyPaused = true;
+                ReleaseKeySafe("right");
+                ReleaseKeySafe("left");
+                if (_exclusiveCard != null)
+                {
+                    ReleaseKeySafe(_exclusiveCard.Key);
+                }
+                UpdateUi(() => txtExpStatus.Text = "🚨 经验停滞超时，已暂停所有按键！");
+            }
+        }
+
+        private static double? ParseExpValue(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            
+            // Look for percentage first, e.g. "99.82%" or "12.3%"
+            var percentMatch = System.Text.RegularExpressions.Regex.Match(text, @"(\d+[\.,]\d+)\s*%");
+            if (percentMatch.Success)
+            {
+                if (double.TryParse(percentMatch.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
+                {
+                    return val;
+                }
+            }
+            
+            // If no percentage match, look for integer percentages like "90%"
+            percentMatch = System.Text.RegularExpressions.Regex.Match(text, @"(\d+)\s*%");
+            if (percentMatch.Success)
+            {
+                if (double.TryParse(percentMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
+                {
+                    return val;
+                }
+            }
+
+            // Try to extract the first continuous sequence of digits (including commas/dots for decimals/thousands)
+            var numberMatch = System.Text.RegularExpressions.Regex.Match(text, @"[\d\.,\s]+");
+            if (numberMatch.Success)
+            {
+                string clean = System.Text.RegularExpressions.Regex.Replace(numberMatch.Value, @"[\s,]+", "");
+                if (double.TryParse(clean, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
+                {
+                    return val;
+                }
+            }
+            
+            return null;
+        }
+
+        private static async Task<string> OcrBitmapAsync(BitmapSource bitmapSource)
+        {
+            try
+            {
+                // Convert BitmapSource to PNG byte array
+                byte[] pngBytes;
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+                using (var ms = new MemoryStream())
+                {
+                    encoder.Save(ms);
+                    pngBytes = ms.ToArray();
+                }
+
+                // Write to Windows Runtime stream
+                var randomAccessStream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+                using (var writer = new Windows.Storage.Streams.DataWriter(randomAccessStream))
+                {
+                    writer.WriteBytes(pngBytes);
+                    await writer.StoreAsync();
+                    await writer.FlushAsync();
+                }
+                
+                randomAccessStream.Seek(0);
+                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(randomAccessStream);
+                var softwareBitmap = await decoder.GetSoftwareBitmapAsync();
+
+                var engine = Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages();
+                if (engine != null)
+                {
+                    var result = await engine.RecognizeAsync(softwareBitmap);
+                    return result.Text;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"OCR error: {ex.Message}");
+            }
+            return string.Empty;
         }
 
         private void SwitchTab(object? selectedItem)
@@ -1328,6 +1509,10 @@ namespace ArtaleProBuff
                 exp_enabled = switchExpMonitor.IsChecked == true,
                 exp_close_game = switchExpCloseGame.IsChecked == true,
                 exp_time = txtExpTimeout.Text.Trim(),
+                exp_crop_x = _cropX,
+                exp_crop_y = _cropY,
+                exp_crop_w = _cropW,
+                exp_crop_h = _cropH,
                 patrol_pause_others = chkPatrolPauseOthers.IsChecked == true,
                 patrol_fluct = txtPatrolFluct.Text.Trim(),
                 cards = _cards.ToList(),
@@ -1360,6 +1545,11 @@ namespace ArtaleProBuff
                 switchExpMonitor.IsChecked = preset.exp_enabled;
                 switchExpCloseGame.IsChecked = preset.exp_close_game;
                 txtExpTimeout.Text = preset.exp_time;
+                
+                _cropX = preset.exp_crop_x;
+                _cropY = preset.exp_crop_y;
+                _cropW = preset.exp_crop_w;
+                _cropH = preset.exp_crop_h;
                 
                 chkPatrolPauseOthers.IsChecked = preset.patrol_pause_others;
                 txtPatrolFluct.Text = preset.patrol_fluct;
@@ -1465,6 +1655,11 @@ namespace ArtaleProBuff
                     switchExpCloseGame.IsChecked = preset.exp_close_game;
                     txtExpTimeout.Text = preset.exp_time;
                     
+                    _cropX = preset.exp_crop_x;
+                    _cropY = preset.exp_crop_y;
+                    _cropW = preset.exp_crop_w;
+                    _cropH = preset.exp_crop_h;
+                    
                     chkPatrolPauseOthers.IsChecked = preset.patrol_pause_others;
                     txtPatrolFluct.Text = preset.patrol_fluct;
                     
@@ -1525,6 +1720,216 @@ namespace ArtaleProBuff
         private void BtnStop_Click(object sender, RoutedEventArgs e)
         {
             StopAll();
+        }
+
+        private void BtnSelectExpRegion_Click(object sender, RoutedEventArgs e)
+        {
+            IntPtr hwnd = GetTargetHwnd();
+            if (hwnd == IntPtr.Zero)
+            {
+                System.Windows.MessageBox.Show(this, "请先在上方‘常规按键’或‘后台挂机’设置中指定正确的游戏目标窗口！", "未找到指定窗口", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var screenshot = CaptureWindowClientArea(hwnd);
+            if (screenshot == null)
+            {
+                System.Windows.MessageBox.Show(this, "截取游戏窗口画面失败，请确保游戏未最小化！", "截图失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var cropWin = new CropWindow(screenshot);
+            cropWin.Owner = this;
+            cropWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            if (cropWin.ShowDialog() == true)
+            {
+                var rect = cropWin.SelectedRect;
+                if (rect.Width > 5 && rect.Height > 5)
+                {
+                    _cropX = rect.X;
+                    _cropY = rect.Y;
+                    _cropW = rect.Width;
+                    _cropH = rect.Height;
+                    
+                    SaveSettings(false);
+                    
+                    // Show confirmation and crop preview immediately
+                    var preview = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
+                    if (preview != null)
+                    {
+                        imgExpRegion.Source = preview;
+                    }
+                    
+                    System.Windows.MessageBox.Show(this, $"选择成功！\n区域坐标: X={_cropX}, Y={_cropY}, 宽={_cropW}, 高={_cropH}\n设置已自动保存。", "区域设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(this, "划选区域过小，请重新选择！", "选择范围太小", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        private static BitmapSource? CaptureWindowClientArea(IntPtr hwnd)
+        {
+            if (IsIconic(hwnd)) return null;
+            if (!GetClientRect(hwnd, out RECT rect)) return null;
+            
+            int w = rect.Right - rect.Left;
+            int h = rect.Bottom - rect.Top;
+            if (w <= 0 || h <= 0) return null;
+            
+            IntPtr clientDC = GetDC(hwnd);
+            if (clientDC == IntPtr.Zero) return null;
+            
+            IntPtr memDC = CreateCompatibleDC(clientDC);
+            IntPtr hbitmap = CreateCompatibleBitmap(clientDC, w, h);
+            IntPtr oldBmp = SelectObject(memDC, hbitmap);
+            
+            bool success = BitBlt(memDC, 0, 0, w, h, clientDC, 0, 0, 0x00CC0020);
+            
+            BitmapSource? bmp = null;
+            if (success)
+            {
+                BITMAPINFOHEADER bih = new BITMAPINFOHEADER();
+                bih.biSize = (uint)Marshal.SizeOf(typeof(BITMAPINFOHEADER));
+                bih.biWidth = w;
+                bih.biHeight = -h;
+                bih.biPlanes = 1;
+                bih.biBitCount = 24;
+                bih.biCompression = 0;
+                bih.biSizeImage = (uint)(w * h * 3);
+                
+                byte[] buffer = new byte[bih.biSizeImage];
+                GetDIBits(memDC, hbitmap, 0, (uint)h, buffer, ref bih, 0);
+                
+                bmp = BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgr24, null, buffer, w * 3);
+                bmp.Freeze();
+            }
+            
+            SelectObject(memDC, oldBmp);
+            DeleteObject(hbitmap);
+            DeleteDC(memDC);
+            ReleaseDC(hwnd, clientDC);
+            
+            return bmp;
+        }
+    }
+
+    public class CropWindow : Window
+    {
+        private Point _startPoint;
+        private Rectangle? _selectionRect;
+        private Canvas _canvas;
+        private bool _isDragging = false;
+        
+        public Int32Rect SelectedRect { get; private set; }
+
+        public CropWindow(BitmapSource screenshot)
+        {
+            WindowStyle = WindowStyle.None;
+            AllowsTransparency = true;
+            Background = Brushes.Transparent;
+            Cursor = System.Windows.Input.Cursors.Cross;
+            
+            // Show image
+            var image = new System.Windows.Controls.Image
+            {
+                Source = screenshot,
+                Stretch = Stretch.None
+            };
+            
+            _canvas = new Canvas();
+            
+            var grid = new Grid();
+            grid.Children.Add(image);
+            
+            // Add a dark semi-transparent overlay
+            var overlay = new Rectangle
+            {
+                Fill = new SolidColorBrush(Color.FromArgb(120, 0, 0, 0)),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+            grid.Children.Add(overlay);
+            grid.Children.Add(_canvas);
+            
+            Content = grid;
+            
+            Width = screenshot.PixelWidth;
+            Height = screenshot.PixelHeight;
+            
+            _canvas.MouseLeftButtonDown += (s, e) =>
+            {
+                _startPoint = e.GetPosition(_canvas);
+                _isDragging = true;
+                
+                if (_selectionRect != null)
+                {
+                    _canvas.Children.Remove(_selectionRect);
+                }
+                
+                _selectionRect = new Rectangle
+                {
+                    Stroke = Brushes.Red,
+                    StrokeThickness = 2,
+                    Fill = new SolidColorBrush(Color.FromArgb(30, 255, 0, 0))
+                };
+                
+                Canvas.SetLeft(_selectionRect, _startPoint.X);
+                Canvas.SetTop(_selectionRect, _startPoint.Y);
+                _selectionRect.Width = 0;
+                _selectionRect.Height = 0;
+                
+                _canvas.Children.Add(_selectionRect);
+                _canvas.CaptureMouse();
+            };
+            
+            _canvas.MouseMove += (s, e) =>
+            {
+                if (!_isDragging || _selectionRect == null) return;
+                
+                var currentPoint = e.GetPosition(_canvas);
+                
+                double x = Math.Min(_startPoint.X, currentPoint.X);
+                double y = Math.Min(_startPoint.Y, currentPoint.Y);
+                double w = Math.Abs(_startPoint.X - currentPoint.X);
+                double h = Math.Abs(_startPoint.Y - currentPoint.Y);
+                
+                Canvas.SetLeft(_selectionRect, x);
+                Canvas.SetTop(_selectionRect, y);
+                _selectionRect.Width = w;
+                _selectionRect.Height = h;
+            };
+            
+            _canvas.MouseLeftButtonUp += (s, e) =>
+            {
+                if (!_isDragging) return;
+                _isDragging = false;
+                _canvas.ReleaseMouseCapture();
+                
+                if (_selectionRect != null)
+                {
+                    double x = Canvas.GetLeft(_selectionRect);
+                    double y = Canvas.GetTop(_selectionRect);
+                    double w = _selectionRect.Width;
+                    double h = _selectionRect.Height;
+                    
+                    SelectedRect = new Int32Rect((int)x, (int)y, (int)w, (int)h);
+                }
+                
+                DialogResult = true;
+                Close();
+            };
+            
+            // Allow escape to cancel selection
+            KeyDown += (s, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    DialogResult = false;
+                    Close();
+                }
+            };
         }
     }
 }
