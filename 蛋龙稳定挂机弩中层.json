@@ -1,0 +1,98 @@
+{
+  "\u5F29\u624B_2": {
+    "global_delay": "1",
+    "bg_enabled": true,
+    "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+    "exp_enabled": false,
+    "exp_close_game": false,
+    "exp_time": "15",
+    "exp_crop_x": 0,
+    "exp_crop_y": 0,
+    "exp_crop_w": 0,
+    "exp_crop_h": 0,
+    "cards": [
+      {
+        "Key": "c",
+        "IntervalText": "0.1",
+        "FluctuationText": "50",
+        "IsActive": true,
+        "IsLongPress": false,
+        "HoldTimeText": "0.01",
+        "IsExclusive": false
+      },
+      {
+        "Key": "7",
+        "IntervalText": "200",
+        "FluctuationText": "10",
+        "IsActive": true,
+        "IsLongPress": false,
+        "HoldTimeText": "5.0",
+        "IsExclusive": true
+      },
+      {
+        "Key": "z",
+        "IntervalText": "10",
+        "FluctuationText": "50",
+        "IsActive": true,
+        "IsLongPress": false,
+        "HoldTimeText": "5.0",
+        "IsExclusive": true
+      }
+    ],
+    "patrol_groups": [
+      {
+        "IsActive": true,
+        "RightTimeText": "0.5",
+        "LeftTimeText": "0.1",
+        "MidPauseTimeText": "0",
+        "IntervalAfterText": "20",
+        "IsTimedLoop": false,
+        "LoopIntervalText": "30",
+        "LoopCountText": "1",
+        "Steps": [
+          {
+            "Direction": "\u53F3",
+            "DurationText": "0.5",
+            "PauseAfterText": "0"
+          },
+          {
+            "Direction": "\u5DE6",
+            "DurationText": "0.01",
+            "PauseAfterText": "0.0"
+          }
+        ],
+        "PauseOthersDuringMove": true
+      },
+      {
+        "IsActive": true,
+        "RightTimeText": "2",
+        "LeftTimeText": "2",
+        "MidPauseTimeText": "0.0",
+        "IntervalAfterText": "1",
+        "IsTimedLoop": true,
+        "LoopIntervalText": "30",
+        "LoopCountText": "1",
+        "Steps": [
+          {
+            "Direction": "\u5DE6",
+            "DurationText": "2.5",
+            "PauseAfterText": "0.0"
+          },
+          {
+            "Direction": "\u53F3",
+            "DurationText": "3",
+            "PauseAfterText": "0.0"
+          },
+          {
+            "Direction": "\u5DE6",
+            "DurationText": "0.01",
+            "PauseAfterText": "0.0"
+          }
+        ],
+        "PauseOthersDuringMove": true
+      }
+    ],
+    "patrol_pause_others": false,
+    "patrol_fluct": "10"
+  }
+}

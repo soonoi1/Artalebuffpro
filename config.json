@@ -5,11 +5,11 @@
   "theme": "light",
   "exp_enabled": true,
   "exp_close_game": false,
-  "exp_time": "15",
-  "exp_crop_x": 904,
-  "exp_crop_y": 852,
-  "exp_crop_w": 159,
-  "exp_crop_h": 27,
+  "exp_time": "25",
+  "exp_crop_x": 1162,
+  "exp_crop_y": 1098,
+  "exp_crop_w": 206,
+  "exp_crop_h": 28,
   "cards": [
     {
       "Key": "c",
@@ -37,24 +37,6 @@
       "IsLongPress": false,
       "HoldTimeText": "5.0",
       "IsExclusive": true
-    },
-    {
-      "Key": "alt",
-      "IntervalText": "175",
-      "FluctuationText": "10",
-      "IsActive": true,
-      "IsLongPress": false,
-      "HoldTimeText": "5.0",
-      "IsExclusive": true
-    },
-    {
-      "Key": "4",
-      "IntervalText": "600",
-      "FluctuationText": "4",
-      "IsActive": true,
-      "IsLongPress": false,
-      "HoldTimeText": "5.0",
-      "IsExclusive": false
     }
   ],
   "patrol_groups": [
@@ -163,7 +145,18 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.1",
+              "PauseAfterText": "2"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.1",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         },
         {
@@ -175,7 +168,18 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.3",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.1",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         }
       ],
@@ -337,7 +341,18 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.1",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         },
         {
@@ -349,7 +364,18 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "10",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "2",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         },
         {
@@ -361,12 +387,479 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "15",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "2.0",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.1",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "10"
+    },
+    "\u5F29": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": true,
+      "exp_close_game": false,
+      "exp_time": "45",
+      "exp_crop_x": 1082,
+      "exp_crop_y": 1097,
+      "exp_crop_w": 190,
+      "exp_crop_h": 29,
+      "cards": [
+        {
+          "Key": "c",
+          "IntervalText": "0.2",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "7",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "z",
+          "IntervalText": "10",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "Alt",
+          "IntervalText": "175",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "4",
+          "IntervalText": "1200",
+          "FluctuationText": "4",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": false
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.5",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0",
+          "IntervalAfterText": "20",
+          "IsTimedLoop": false,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2",
+          "LeftTimeText": "2",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "1",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "15",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2.5",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u53F3",
+              "DurationText": "4",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "10"
+    },
+    "\u5F29\u4E2D\u5C42": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": true,
+      "exp_close_game": false,
+      "exp_time": "45",
+      "exp_crop_x": 1082,
+      "exp_crop_y": 1097,
+      "exp_crop_w": 190,
+      "exp_crop_h": 29,
+      "cards": [
+        {
+          "Key": "c",
+          "IntervalText": "0.2",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "7",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "z",
+          "IntervalText": "10",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "Alt",
+          "IntervalText": "175",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "4",
+          "IntervalText": "1200",
+          "FluctuationText": "4",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": false
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.5",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0",
+          "IntervalAfterText": "20",
+          "IsTimedLoop": false,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2",
+          "LeftTimeText": "2",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "1",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "15",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2.5",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u53F3",
+              "DurationText": "4",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "45"
+    },
+    "\u5F29\u4E0B\u5C42": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": true,
+      "exp_close_game": false,
+      "exp_time": "45",
+      "exp_crop_x": 1082,
+      "exp_crop_y": 1097,
+      "exp_crop_w": 190,
+      "exp_crop_h": 29,
+      "cards": [
+        {
+          "Key": "c",
+          "IntervalText": "0.2",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "7",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "z",
+          "IntervalText": "10",
+          "FluctuationText": "20",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "Alt",
+          "IntervalText": "175",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "4",
+          "IntervalText": "1200",
+          "FluctuationText": "4",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": false
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.5",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0",
+          "IntervalAfterText": "20",
+          "IsTimedLoop": false,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2",
+          "LeftTimeText": "2",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "1",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "15",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2.5",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u53F3",
+              "DurationText": "4",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.6",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "45"
+    },
+    "\u5F29\u624B_2": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": false,
+      "exp_close_game": false,
+      "exp_time": "15",
+      "exp_crop_x": 0,
+      "exp_crop_y": 0,
+      "exp_crop_w": 0,
+      "exp_crop_h": 0,
+      "cards": [
+        {
+          "Key": "c",
+          "IntervalText": "0.1",
+          "FluctuationText": "50",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "7",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "z",
+          "IntervalText": "10",
+          "FluctuationText": "50",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.5",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0",
+          "IntervalAfterText": "20",
+          "IsTimedLoop": false,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
+          "PauseOthersDuringMove": true
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2",
+          "LeftTimeText": "2",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "1",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": [
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2.5",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u53F3",
+              "DurationText": "3",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         }
       ],
       "patrol_pause_others": false,
       "patrol_fluct": "10"
     }
+  },
+  "boss_hunt_map_exp": {
+    "\u84DD\u8611\u83C7": 320
   }
 }

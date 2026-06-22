@@ -424,7 +424,7 @@ namespace ArtaleProBuff
         private BuffCardViewModel _exclusiveCard = null;
         private bool _isPatrolRunning = false;
         private CancellationTokenSource _patrolCts = null;
-        private CancellationTokenSource _expCts = null;
+        private CancellationTokenSource? _globalMonitorCts = null;
         
         // Thread-safe cached state (避免跨线程访问UI控件)
         private volatile bool _isBgMode = false;
@@ -488,11 +488,15 @@ namespace ArtaleProBuff
             RegisterHotKey(_hwnd, HOTKEY_START_ID, 0, 0x78); // F9
             RegisterHotKey(_hwnd, HOTKEY_STOP_ID, 0, 0x79);  // F10
             RegisterHotKey(_hwnd, HOTKEY_RESET_ID, 0, 0x7A); // F11
+            
+            StartGlobalMonitorLoop();
         }
 
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
+            
+            StopGlobalMonitorLoop();
             
             if (_hwnd != IntPtr.Zero)
             {
@@ -712,9 +716,6 @@ namespace ArtaleProBuff
         {
             if (_isRunningGlobal) return;
             
-            // Stop real-time preview loop during macro execution
-            StopPreviewLoop();
-            
             // 缓存后台模式状态（避免后台线程跨线程访问UI控件导致静默异常）
             _isBgMode = switchBgMode.IsChecked == true;
             
@@ -756,12 +757,15 @@ namespace ArtaleProBuff
                 StartPatrolLogic();
             }
             
-            // Start EXP Monitor
+            // Reset experience monitor calibration variables on start
             if (switchExpMonitor.IsChecked == true)
             {
-                double expTimeout = 15;
-                double.TryParse(txtExpTimeout.Text, out expTimeout);
-                StartExpMonitorLogic(expTimeout);
+                _lastParsedExp = null;
+                _initialExpValue = null;
+                _accumulatedExpGained = 0;
+                _initialExpIsPercent = false;
+                _lastCalibrationTime = DateTime.Now;
+                _expHistory.Clear();
             }
         }
 
@@ -798,14 +802,6 @@ namespace ArtaleProBuff
             ReleaseKeySafe("right");
             ReleaseKeySafe("left");
             
-            // Cancel EXP Monitor
-            if (_expCts != null)
-            {
-                _expCts.Cancel();
-                _expCts.Dispose();
-                _expCts = null;
-            }
-            
             // 重置缓存的后台状态与暂停状态
             _isBgMode = false;
             _cachedBgHwnd = IntPtr.Zero;
@@ -813,14 +809,9 @@ namespace ArtaleProBuff
             _isPatrolMoving = false;
             
             txtPatrolStatus.Text = "已停止";
-            txtExpStatus.Text = switchExpMonitor.IsChecked == true ? "监测关闭" : "监测关闭";
+            txtExpStatus.Text = "正常监控中";
+            if (txtExpStatusBH != null) txtExpStatusBH.Text = "正常监控中";
             foreach (var g in _patrolGroups) g.Status = "等待运行";
-
-            // Restart real-time preview loop if settings panel is currently open
-            if (SettingsPanel.Visibility == Visibility.Visible)
-            {
-                StartPreviewLoop();
-            }
         }
 
         // Macro Logic Implementations
@@ -1315,83 +1306,87 @@ namespace ArtaleProBuff
             }, token);
         }
 
-        private void StartExpMonitorLogic(double expTimeout)
+        private void StartGlobalMonitorLoop()
         {
-            if (_expCts != null)
-            {
-                _expCts.Cancel();
-                _expCts.Dispose();
-            }
-            _expCts = new CancellationTokenSource();
-            var token = _expCts.Token;
+            StopGlobalMonitorLoop();
+            _globalMonitorCts = new CancellationTokenSource();
+            var token = _globalMonitorCts.Token;
 
-            txtExpStatus.Text = "启动中...";
+            // Initialize baseline variables
             _lastParsedExp = null;
             _initialExpValue = null;
             _accumulatedExpGained = 0;
             _initialExpIsPercent = false;
             _lastCalibrationTime = DateTime.Now;
             _expHistory.Clear();
-            
-            UpdateUi(() => {
-                txtExpOcrText.Text = "准备识别...";
-                txtExpRateMin.Text = "0.00%";
-                txtExpRate10Min.Text = "0.00%";
-                txtExpTotalGained.Text = "0.00%";
-            });
 
             Task.Run(async () =>
             {
                 int staticSec = 0;
-
                 try
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        await Task.Delay(1500, token); // 1.5 seconds intervals for OCR and UI performance
+                        await Task.Delay(1500, token);
 
                         IntPtr hwnd = GetTargetHwnd();
                         if (hwnd == IntPtr.Zero)
                         {
-                            UpdateUi(() => txtExpStatus.Text = "未找到目标窗口");
-                            staticSec++;
-                            if (staticSec >= expTimeout)
+                            UpdateUi(() => {
+                                txtExpStatus.Text = "未找到目标窗口";
+                                if (txtExpStatusBH != null) txtExpStatusBH.Text = "未找到目标窗口";
+                            });
+                            
+                            // If global macro is running and monitor is enabled, check timeout
+                            if (_isRunningGlobal && switchExpMonitor.IsChecked == true)
                             {
-                                HandleExpTimeout(hwnd);
-                                break;
+                                double expTimeout = 15;
+                                UpdateUi(() => double.TryParse(txtExpTimeout.Text, out expTimeout));
+                                staticSec += 2;
+                                if (staticSec >= expTimeout)
+                                {
+                                    HandleExpTimeout(hwnd);
+                                    break;
+                                }
                             }
                             continue;
                         }
 
                         if (IsIconic(hwnd))
                         {
-                            UpdateUi(() => txtExpStatus.Text = "窗口最小化 (暂停计数)");
-                            staticSec = 0; // pause timeout check while iconic
+                            UpdateUi(() => {
+                                txtExpStatus.Text = "窗口最小化 (暂停计数)";
+                                if (txtExpStatusBH != null) txtExpStatusBH.Text = "窗口最小化 (暂停计数)";
+                            });
+                            staticSec = 0;
                             continue;
                         }
 
                         BitmapSource? bmp = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
                         if (bmp == null)
                         {
-                            UpdateUi(() => txtExpStatus.Text = "捕获画面失败 (暂停计数)");
+                            UpdateUi(() => {
+                                txtExpStatus.Text = "捕获画面失败 (暂停计数)";
+                                if (txtExpStatusBH != null) txtExpStatusBH.Text = "捕获画面失败 (暂停计数)";
+                            });
                             staticSec = 0;
                             continue;
                         }
 
-                        // Update live crop display in UI thread
-                        UpdateUi(() => imgExpRegion.Source = bmp);
-
                         // Perform OCR on the cropped bitmap
                         string ocrText = await OcrBitmapAsync(bmp);
-                        UpdateUi(() => txtExpOcrText.Text = GetFriendlyOcrDisplay(ocrText));
-
                         double? currentVal = ParseExpValue(ocrText);
                         bool changed = false;
+
+                        // Calculate growth rates & update UI
+                        double rateMin = 0;
+                        double rate10Min = 0;
+                        double totalGained = 0;
+                        bool isPercent = ocrText.Contains("%");
 
                         if (currentVal.HasValue)
                         {
                             var now = DateTime.Now;
-                            bool isPercent = ocrText.Contains("%");
 
                             if (!_initialExpValue.HasValue)
                             {
@@ -1441,7 +1436,7 @@ namespace ArtaleProBuff
                             }
 
                             double displayDelta = (isDeltaValid && delta > 0) ? delta : 0;
-                            double totalGained = _accumulatedExpGained + displayDelta;
+                            totalGained = _accumulatedExpGained + displayDelta;
 
                             if (isDeltaValid)
                             {
@@ -1450,8 +1445,6 @@ namespace ArtaleProBuff
                             _expHistory.RemoveAll(x => (now - x.Time).TotalMinutes > 11);
 
                             // Calculate growth rates
-                            double rateMin = 0;
-                            double rate10Min = 0;
                             if (_expHistory.Count > 1)
                             {
                                 var oldest = _expHistory[0];
@@ -1492,23 +1485,6 @@ namespace ArtaleProBuff
                                 }
                             }
 
-                            // Update growth rate display on UI
-                            bool isPercentDisplay = isPercent;
-                            UpdateUi(() => {
-                                if (isPercentDisplay)
-                                {
-                                    txtExpRateMin.Text = $"+{rateMin:F4}%";
-                                    txtExpRate10Min.Text = $"+{rate10Min:F4}%";
-                                    txtExpTotalGained.Text = $"+{totalGained:F4}%";
-                                }
-                                else
-                                {
-                                    txtExpRateMin.Text = $"+{rateMin:F1}";
-                                    txtExpRate10Min.Text = $"+{rate10Min:F1}";
-                                    txtExpTotalGained.Text = $"+{totalGained:F1}";
-                                }
-                            });
-
                             if (_lastParsedExp.HasValue)
                             {
                                 if (currentVal.Value != _lastParsedExp.Value && isDeltaValid)
@@ -1533,37 +1509,125 @@ namespace ArtaleProBuff
                             }
                         }
 
-                        if (changed)
+                        // Update both UI panels using helper function
+                        UpdateExpUi(bmp, ocrText, currentVal, rateMin, rate10Min, totalGained, isPercent);
+
+                        // If global macro is running and monitor is enabled, check timeout
+                        if (_isRunningGlobal && switchExpMonitor.IsChecked == true)
                         {
-                            staticSec = 0;
-                            if (_isGloballyPaused)
+                            double expTimeout = 15;
+                            UpdateUi(() => double.TryParse(txtExpTimeout.Text, out expTimeout));
+
+                            if (changed)
                             {
-                                _isGloballyPaused = false;
+                                staticSec = 0;
+                                if (_isGloballyPaused)
+                                {
+                                    _isGloballyPaused = false;
+                                }
+                                UpdateUi(() => {
+                                    txtExpStatus.Text = "正常运行 (经验变动中)";
+                                    if (txtExpStatusBH != null) txtExpStatusBH.Text = "正常运行 (经验变动中)";
+                                });
                             }
-                            UpdateUi(() => txtExpStatus.Text = "正常运行 (经验变动中)");
+                            else
+                            {
+                                staticSec += 2; // Approx 1.5s delay
+                                UpdateUi(() => {
+                                    txtExpStatus.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)";
+                                    if (txtExpStatusBH != null) txtExpStatusBH.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)";
+                                });
+
+                                if (staticSec >= expTimeout)
+                                {
+                                    HandleExpTimeout(hwnd);
+                                    break;
+                                }
+                            }
                         }
                         else
                         {
-                            staticSec += 2; // Incremented by 2 because delay is 1.5s (approx 1.5s intervals)
-                            UpdateUi(() => txtExpStatus.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)");
-
-                            if (staticSec >= expTimeout)
-                            {
-                                HandleExpTimeout(hwnd);
-                                break;
-                            }
+                            // Reset staticSec if not running or monitor disabled
+                            staticSec = 0;
+                            UpdateUi(() => {
+                                string activeText = "正常监控中";
+                                txtExpStatus.Text = activeText;
+                                if (txtExpStatusBH != null) txtExpStatusBH.Text = activeText;
+                            });
                         }
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    UpdateUi(() => txtExpStatus.Text = "监测已关闭");
-                }
+                catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
-                    UpdateUi(() => txtExpStatus.Text = $"监测出错: {ex.Message}");
+                    UpdateUi(() => {
+                        txtExpStatus.Text = $"异常: {ex.Message}";
+                        if (txtExpStatusBH != null) txtExpStatusBH.Text = $"异常: {ex.Message}";
+                    });
                 }
             }, token);
+        }
+
+        private void StopGlobalMonitorLoop()
+        {
+            if (_globalMonitorCts != null)
+            {
+                _globalMonitorCts.Cancel();
+                _globalMonitorCts.Dispose();
+                _globalMonitorCts = null;
+            }
+        }
+
+        private void UpdateExpUi(BitmapSource? bmp, string ocrText, double? val, double rateMin, double rate10Min, double totalGained, bool isPercentDisplay)
+        {
+            UpdateUi(() =>
+            {
+                if (bmp != null)
+                {
+                    imgExpRegion.Source = bmp;
+                    if (imgExpRegionBH != null)
+                    {
+                        imgExpRegionBH.Source = bmp;
+                    }
+                }
+
+                string friendlyText;
+                if (string.IsNullOrWhiteSpace(ocrText) || ocrText.StartsWith("__ERROR_"))
+                {
+                    friendlyText = GetFriendlyOcrDisplay(ocrText);
+                }
+                else
+                {
+                    friendlyText = val.HasValue 
+                        ? $"{ocrText.Trim()} (解析成功: {val.Value})" 
+                        : $"{ocrText.Trim()} (解析失败)";
+                }
+
+                txtExpOcrText.Text = friendlyText;
+                if (txtExpOcrTextBH != null) txtExpOcrTextBH.Text = friendlyText;
+
+                string minStr, tenMinStr, totalStr;
+                if (isPercentDisplay)
+                {
+                    minStr = $"+{rateMin:F4}%";
+                    tenMinStr = $"+{rate10Min:F4}%";
+                    totalStr = $"+{totalGained:F4}%";
+                }
+                else
+                {
+                    minStr = $"+{rateMin:F1}";
+                    tenMinStr = $"+{rate10Min:F1}";
+                    totalStr = $"+{totalGained:F1}";
+                }
+
+                txtExpRateMin.Text = minStr;
+                txtExpRate10Min.Text = tenMinStr;
+                txtExpTotalGained.Text = totalStr;
+
+                if (txtExpRateMinBH != null) txtExpRateMinBH.Text = minStr;
+                if (txtExpRate10MinBH != null) txtExpRate10MinBH.Text = tenMinStr;
+                if (txtExpTotalGainedBH != null) txtExpTotalGainedBH.Text = totalStr;
+            });
         }
 
         private void HandleExpTimeout(IntPtr hwnd)
@@ -1713,68 +1777,6 @@ namespace ArtaleProBuff
             }
         }
 
-        private CancellationTokenSource? _previewCts = null;
-
-        private void StartPreviewLoop()
-        {
-            StopPreviewLoop();
-            if (_isRunningGlobal) return; // Main macro loop will handle updates during execution
-            
-            _previewCts = new CancellationTokenSource();
-            var token = _previewCts.Token;
-
-            Task.Run(async () =>
-            {
-                try
-                {
-                    while (!token.IsCancellationRequested)
-                    {
-                        IntPtr hwnd = GetTargetHwnd();
-                        if (hwnd != IntPtr.Zero && !IsIconic(hwnd))
-                        {
-                            var bmp = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
-                            if (bmp != null)
-                            {
-                                string ocrText = await OcrBitmapAsync(bmp);
-                                double? val = ParseExpValue(ocrText);
-                                
-                                UpdateUi(() =>
-                                {
-                                    imgExpRegion.Source = bmp;
-                                    if (string.IsNullOrWhiteSpace(ocrText) || ocrText.StartsWith("__ERROR_"))
-                                    {
-                                        txtExpOcrText.Text = GetFriendlyOcrDisplay(ocrText);
-                                    }
-                                    else
-                                    {
-                                        txtExpOcrText.Text = val.HasValue 
-                                            ? $"{ocrText.Trim()} (解析成功: {val.Value})" 
-                                            : $"{ocrText.Trim()} (解析失败)";
-                                    }
-                                });
-                            }
-                        }
-                        await Task.Delay(1500, token);
-                    }
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Preview loop error: {ex.Message}");
-                }
-            }, token);
-        }
-
-        private void StopPreviewLoop()
-        {
-            if (_previewCts != null)
-            {
-                _previewCts.Cancel();
-                _previewCts.Dispose();
-                _previewCts = null;
-            }
-        }
-
         private void SwitchTab(object? selectedItem)
         {
             if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null || BossHuntingPanel == null) return;
@@ -1784,9 +1786,6 @@ namespace ArtaleProBuff
             PresetsPanel.Visibility = Visibility.Collapsed;
             SettingsPanel.Visibility = Visibility.Collapsed;
             BossHuntingPanel.Visibility = Visibility.Collapsed;
-            
-            // Stop preview loop when switching tabs
-            StopPreviewLoop();
             
             if (selectedItem is NavigationViewItem item)
             {
@@ -1810,9 +1809,6 @@ namespace ArtaleProBuff
                 else if (content.Contains("全局与安全"))
                 {
                     SettingsPanel.Visibility = Visibility.Visible;
-                    
-                    // Start real-time preview loop
-                    StartPreviewLoop();
                 }
             }
         }
@@ -2252,11 +2248,41 @@ namespace ArtaleProBuff
             _lastParsedExp = null;
 
             UpdateUi(() => {
-                txtExpRateMin.Text = "0.00%";
-                txtExpRate10Min.Text = "0.00%";
-                txtExpTotalGained.Text = "0.00%";
-                txtExpOcrText.Text = "已重置，等待下一次识别...";
+                string zeroStr = "0.00%";
+                string resetStr = "已重置，等待下一次识别...";
+
+                txtExpRateMin.Text = zeroStr;
+                txtExpRate10Min.Text = zeroStr;
+                txtExpTotalGained.Text = zeroStr;
+                txtExpOcrText.Text = resetStr;
+
+                if (txtExpRateMinBH != null) txtExpRateMinBH.Text = zeroStr;
+                if (txtExpRate10MinBH != null) txtExpRate10MinBH.Text = zeroStr;
+                if (txtExpTotalGainedBH != null) txtExpTotalGainedBH.Text = zeroStr;
+                if (txtExpOcrTextBH != null) txtExpOcrTextBH.Text = resetStr;
             });
+        }
+
+        private void BtnSelectExpRegionBH_Click(object sender, RoutedEventArgs e)
+        {
+            BtnSelectExpRegion_Click(sender, e);
+            if (imgExpRegionBH != null)
+            {
+                IntPtr hwnd = GetTargetHwnd();
+                if (hwnd != IntPtr.Zero)
+                {
+                    var preview = CaptureExpRegion(hwnd, _cropX, _cropY, _cropW, _cropH);
+                    if (preview != null)
+                    {
+                        imgExpRegionBH.Source = preview;
+                    }
+                }
+            }
+        }
+
+        private void BtnResetExpBH_Click(object sender, RoutedEventArgs e)
+        {
+            BtnResetExp_Click(sender, e);
         }
 
         private static BitmapSource? CaptureWindowClientArea(IntPtr hwnd)

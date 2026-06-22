@@ -459,7 +459,7 @@
                             <!-- Card for Boss Hunt Settings -->
                             <ui:CardExpander Header="👹 找王击杀计数器 (阿尔泰换线打满10只怪物提示)" Icon="{ui:SymbolIcon Target24}" IsExpanded="True">
                                 <StackPanel local:StackPanelHelper.Spacing="10" Margin="0,6,0,0">
-                                    <TextBlock Text="这个功能基于经验值变动进行统计，无需独立启动，只要下方的经验值监测开启，便会自动累加计数。" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="这个功能基于经验值变动进行统计，软件启动后便会在后台自动开始截图识别并实时更新计数，无需单独点击启动。" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                     
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -516,6 +516,60 @@
                                         <ui:Button Grid.Column="0" Content="🔄 重置当前计数 (快捷键: F11)" Click="BtnResetBossHuntKills_Click" Height="40" FontSize="14" FontWeight="SemiBold" Appearance="Primary" HorizontalAlignment="Stretch" />
                                         <TextBlock Grid.Column="1" Text="提示：换线后按 F11 即可在游戏内静默重置计数" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="15,0,0,0"/>
                                     </Grid>
+
+                                    <!-- Synced Experience Monitor Panel -->
+                                    <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Padding="12" Margin="0,5,0,0">
+                                        <StackPanel local:StackPanelHelper.Spacing="10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="📈 经验监控面板 (实时同步)" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                <ui:Button Grid.Column="1" Content="选择经验值监控区域" Icon="{ui:SymbolIcon Crop24}" Click="BtnSelectExpRegionBH_Click" Margin="10,0,0,0" Appearance="Primary" />
+                                                <ui:Button Grid.Column="2" Content="重置数据" Icon="{ui:SymbolIcon ArrowReset24}" Click="BtnResetExpBH_Click" Margin="10,0,0,0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                            </Grid>
+
+                                            <Separator Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,2,0,2"/>
+
+                                            <!-- 1. Live screen -->
+                                            <TextBlock Text="实时监控画面 (所选区域):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <Border BorderBrush="{DynamicResource SystemAccentColorBrush}" BorderThickness="1" HorizontalAlignment="Left" Background="Black" CornerRadius="2" Padding="2">
+                                                <Image x:Name="imgExpRegionBH" Width="220" Height="40" Stretch="Uniform" />
+                                            </Border>
+
+                                            <!-- 2. OCR text -->
+                                            <TextBlock Text="识别到的经验值文本:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock x:Name="txtExpOcrTextBH" Text="未识别到数据" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+                                            <!-- 3. Growth rate -->
+                                            <TextBlock Text="经验增长速度 analysis:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="每分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock x:Name="txtExpRateMinBH" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="每 10 分钟增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock x:Name="txtExpRate10MinBH" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="累计增长:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock x:Name="txtExpTotalGainedBH" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Status label -->
+                                            <TextBlock Text="监测状态报告:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,0"/>
+                                            <TextBlock x:Name="txtExpStatusBH" Text="正在等待监控启动..." FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </ui:CardExpander>
                         </StackPanel>
