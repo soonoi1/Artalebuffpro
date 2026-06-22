@@ -13,10 +13,10 @@
   "cards": [
     {
       "Key": "c",
-      "IntervalText": "0.01",
+      "IntervalText": "0.5",
       "FluctuationText": "50",
       "IsActive": true,
-      "IsLongPress": true,
+      "IsLongPress": false,
       "HoldTimeText": "0.01",
       "IsExclusive": false
     },
@@ -33,7 +33,7 @@
       "Key": "z",
       "IntervalText": "10",
       "FluctuationText": "50",
-      "IsActive": true,
+      "IsActive": false,
       "IsLongPress": false,
       "HoldTimeText": "5.0",
       "IsExclusive": true
@@ -45,13 +45,13 @@
       "RightTimeText": "0.5",
       "LeftTimeText": "0.1",
       "MidPauseTimeText": "0",
-      "IntervalAfterText": "5",
+      "IntervalAfterText": "0",
       "IsTimedLoop": false,
       "LoopIntervalText": "30",
       "LoopCountText": "1",
       "Steps": [
         {
-          "Direction": "\u53F3",
+          "Direction": "\u8D70\u53F3",
           "DurationText": "0.5",
           "PauseAfterText": "0"
         },
@@ -60,7 +60,8 @@
           "DurationText": "0.1",
           "PauseAfterText": "0.0"
         }
-      ]
+      ],
+      "PauseOthersDuringMove": true
     },
     {
       "IsActive": true,
@@ -78,8 +79,8 @@
           "PauseAfterText": "0.0"
         },
         {
-          "Direction": "\u5DE6",
-          "DurationText": "2",
+          "Direction": "\u8D70\u53F3",
+          "DurationText": "4",
           "PauseAfterText": "0.0"
         },
         {
@@ -87,29 +88,8 @@
           "DurationText": "0.1",
           "PauseAfterText": "0.0"
         }
-      ]
-    },
-    {
-      "IsActive": false,
-      "RightTimeText": "2.0",
-      "LeftTimeText": "0.1",
-      "MidPauseTimeText": "0.0",
-      "IntervalAfterText": "0.1",
-      "IsTimedLoop": true,
-      "LoopIntervalText": "15",
-      "LoopCountText": "1",
-      "Steps": [
-        {
-          "Direction": "\u53F3",
-          "DurationText": "2.0",
-          "PauseAfterText": "0.0"
-        },
-        {
-          "Direction": "\u5DE6",
-          "DurationText": "0.1",
-          "PauseAfterText": "0.0"
-        }
-      ]
+      ],
+      "PauseOthersDuringMove": true
     }
   ],
   "patrol_pause_others": false,
@@ -165,7 +145,8 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         },
         {
           "IsActive": true,
@@ -176,7 +157,8 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         }
       ],
       "patrol_pause_others": false,
@@ -232,7 +214,8 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         },
         {
           "IsActive": true,
@@ -243,7 +226,8 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "10",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         },
         {
           "IsActive": true,
@@ -254,7 +238,8 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "15",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         }
       ],
       "patrol_pause_others": false,
@@ -310,7 +295,8 @@
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         },
         {
           "IsActive": true,
@@ -321,7 +307,8 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "10",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         },
         {
           "IsActive": true,
@@ -332,7 +319,8 @@
           "IsTimedLoop": true,
           "LoopIntervalText": "15",
           "LoopCountText": "1",
-          "Steps": []
+          "Steps": [],
+          "PauseOthersDuringMove": true
         }
       ],
       "patrol_pause_others": false,

@@ -237,8 +237,6 @@
                                                                     
                                                                     <!-- Direction -->
                                                                     <ComboBox Grid.Column="0" SelectedValue="{Binding Direction, Mode=TwoWay}" SelectedValuePath="Tag" Width="95" Padding="6,4,6,4" VerticalAlignment="Center">
-                                                                        <ComboBoxItem Content="向右走" Tag="走右" />
-                                                                        <ComboBoxItem Content="向左走" Tag="走左" />
                                                                         <ComboBoxItem Content="向右走" Tag="右" />
                                                                         <ComboBoxItem Content="向左走" Tag="左" />
                                                                     </ComboBox>
