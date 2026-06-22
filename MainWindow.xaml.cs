@@ -448,6 +448,7 @@ namespace ArtaleProBuff
         private bool _initialExpIsPercent = false;
         private DateTime _lastCalibrationTime = DateTime.MinValue;
         private readonly List<(DateTime Time, double Value)> _expHistory = new List<(DateTime Time, double Value)>();
+        private double _totalGrindingSeconds = 0;
         
         private IntPtr _hwnd = IntPtr.Zero;
         private HwndSource _hwndSource = null;
@@ -1373,6 +1374,11 @@ namespace ArtaleProBuff
                             continue;
                         }
 
+                        if (_isRunningGlobal && !_isGloballyPaused)
+                        {
+                            _totalGrindingSeconds += 1.5;
+                        }
+
                         // Perform OCR on the cropped bitmap
                         string ocrText = await OcrBitmapAsync(bmp);
                         double? currentVal = ParseExpValue(ocrText);
@@ -1578,6 +1584,14 @@ namespace ArtaleProBuff
             }
         }
 
+        private string FormatGrindingTime(double totalSeconds)
+        {
+            int h = (int)(totalSeconds / 3600);
+            int m = (int)((totalSeconds % 3600) / 60);
+            int s = (int)(totalSeconds % 60);
+            return $"{h}小时 {m}分钟 {s}秒";
+        }
+
         private void UpdateExpUi(BitmapSource? bmp, string ocrText, double? val, double rateMin, double rate10Min, double totalGained, bool isPercentDisplay)
         {
             UpdateUi(() =>
@@ -1627,6 +1641,10 @@ namespace ArtaleProBuff
                 if (txtExpRateMinBH != null) txtExpRateMinBH.Text = minStr;
                 if (txtExpRate10MinBH != null) txtExpRate10MinBH.Text = tenMinStr;
                 if (txtExpTotalGainedBH != null) txtExpTotalGainedBH.Text = totalStr;
+
+                string timeStr = FormatGrindingTime(_totalGrindingSeconds);
+                if (txtExpGrindingTime != null) txtExpGrindingTime.Text = timeStr;
+                if (txtExpGrindingTimeBH != null) txtExpGrindingTimeBH.Text = timeStr;
             });
         }
 
@@ -2246,10 +2264,12 @@ namespace ArtaleProBuff
             _lastCalibrationTime = DateTime.Now;
             _expHistory.Clear();
             _lastParsedExp = null;
+            _totalGrindingSeconds = 0;
 
             UpdateUi(() => {
                 string zeroStr = "0.00%";
                 string resetStr = "已重置，等待下一次识别...";
+                string zeroTime = "0小时 0分钟 0秒";
 
                 txtExpRateMin.Text = zeroStr;
                 txtExpRate10Min.Text = zeroStr;
@@ -2260,6 +2280,9 @@ namespace ArtaleProBuff
                 if (txtExpRate10MinBH != null) txtExpRate10MinBH.Text = zeroStr;
                 if (txtExpTotalGainedBH != null) txtExpTotalGainedBH.Text = zeroStr;
                 if (txtExpOcrTextBH != null) txtExpOcrTextBH.Text = resetStr;
+
+                if (txtExpGrindingTime != null) txtExpGrindingTime.Text = zeroTime;
+                if (txtExpGrindingTimeBH != null) txtExpGrindingTimeBH.Text = zeroTime;
             });
         }
 

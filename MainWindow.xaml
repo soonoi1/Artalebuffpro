@@ -430,6 +430,10 @@
                                                         <TextBlock x:Name="txtExpTotalGained" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                                     </StackPanel>
                                                 </Grid>
+
+                                                <!-- 4. Grinding Time -->
+                                                <TextBlock Text="总练功挂机时间 (按F9启动且正常打怪):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,0"/>
+                                                <TextBlock x:Name="txtExpGrindingTime" Text="0小时 0分钟 0秒" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -564,6 +568,10 @@
                                                     <TextBlock x:Name="txtExpTotalGainedBH" Text="0.00%" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                                 </StackPanel>
                                             </Grid>
+
+                                            <!-- 4. Grinding Time -->
+                                            <TextBlock Text="总练功挂机时间 (按F9启动且正常打怪):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,0"/>
+                                            <TextBlock x:Name="txtExpGrindingTimeBH" Text="0小时 0分钟 0秒" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
 
                                             <!-- Status label -->
                                             <TextBlock Text="监测状态报告:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,5,0,0"/>
