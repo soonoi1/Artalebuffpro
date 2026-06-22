@@ -48,27 +48,68 @@
       "IntervalAfterText": "5",
       "IsTimedLoop": false,
       "LoopIntervalText": "30",
-      "LoopCountText": "1"
+      "LoopCountText": "1",
+      "Steps": [
+        {
+          "Direction": "\u53F3",
+          "DurationText": "0.5",
+          "PauseAfterText": "0"
+        },
+        {
+          "Direction": "\u5DE6",
+          "DurationText": "0.1",
+          "PauseAfterText": "0.0"
+        }
+      ]
     },
     {
       "IsActive": true,
       "RightTimeText": "2",
       "LeftTimeText": "2",
       "MidPauseTimeText": "0.0",
-      "IntervalAfterText": "2",
+      "IntervalAfterText": "",
       "IsTimedLoop": true,
       "LoopIntervalText": "10",
-      "LoopCountText": "1"
+      "LoopCountText": "1",
+      "Steps": [
+        {
+          "Direction": "\u5DE6",
+          "DurationText": "2",
+          "PauseAfterText": "0.0"
+        },
+        {
+          "Direction": "\u5DE6",
+          "DurationText": "2",
+          "PauseAfterText": "0.0"
+        },
+        {
+          "Direction": "\u53F3",
+          "DurationText": "0.1",
+          "PauseAfterText": "0.0"
+        }
+      ]
     },
     {
-      "IsActive": true,
+      "IsActive": false,
       "RightTimeText": "2.0",
       "LeftTimeText": "0.1",
       "MidPauseTimeText": "0.0",
       "IntervalAfterText": "0.1",
       "IsTimedLoop": true,
       "LoopIntervalText": "15",
-      "LoopCountText": "1"
+      "LoopCountText": "1",
+      "Steps": [
+        {
+          "Direction": "\u53F3",
+          "DurationText": "2.0",
+          "PauseAfterText": "0.0"
+        },
+        {
+          "Direction": "\u5DE6",
+          "DurationText": "0.1",
+          "PauseAfterText": "0.0"
+        }
+      ]
     }
   ],
   "patrol_pause_others": false,
@@ -123,7 +164,8 @@
           "IntervalAfterText": "2",
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
-          "LoopCountText": "1"
+          "LoopCountText": "1",
+          "Steps": []
         },
         {
           "IsActive": true,
@@ -133,7 +175,8 @@
           "IntervalAfterText": "2",
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
-          "LoopCountText": "1"
+          "LoopCountText": "1",
+          "Steps": []
         }
       ],
       "patrol_pause_others": false,
@@ -188,7 +231,8 @@
           "IntervalAfterText": "5",
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
-          "LoopCountText": "1"
+          "LoopCountText": "1",
+          "Steps": []
         },
         {
           "IsActive": true,
@@ -198,7 +242,8 @@
           "IntervalAfterText": "2",
           "IsTimedLoop": true,
           "LoopIntervalText": "10",
-          "LoopCountText": "1"
+          "LoopCountText": "1",
+          "Steps": []
         },
         {
           "IsActive": true,
@@ -208,7 +253,86 @@
           "IntervalAfterText": "0.1",
           "IsTimedLoop": true,
           "LoopIntervalText": "15",
-          "LoopCountText": "1"
+          "LoopCountText": "1",
+          "Steps": []
+        }
+      ],
+      "patrol_pause_others": false,
+      "patrol_fluct": "10"
+    },
+    "\u5F29\u624B_1": {
+      "global_delay": "1",
+      "bg_enabled": true,
+      "bg_title": "MapleStory Worlds-Artale (\u7E41\u9AD4\u4E2D\u6587\u7248)",
+      "exp_enabled": true,
+      "exp_close_game": false,
+      "exp_time": "15",
+      "exp_crop_x": 0,
+      "exp_crop_y": 0,
+      "exp_crop_w": 0,
+      "exp_crop_h": 0,
+      "cards": [
+        {
+          "Key": "c",
+          "IntervalText": "0.01",
+          "FluctuationText": "50",
+          "IsActive": true,
+          "IsLongPress": true,
+          "HoldTimeText": "0.01",
+          "IsExclusive": false
+        },
+        {
+          "Key": "f1",
+          "IntervalText": "200",
+          "FluctuationText": "10",
+          "IsActive": false,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        },
+        {
+          "Key": "z",
+          "IntervalText": "10",
+          "FluctuationText": "50",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
+        }
+      ],
+      "patrol_groups": [
+        {
+          "IsActive": true,
+          "RightTimeText": "0.5",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0",
+          "IntervalAfterText": "5",
+          "IsTimedLoop": false,
+          "LoopIntervalText": "30",
+          "LoopCountText": "1",
+          "Steps": []
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2",
+          "LeftTimeText": "2",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "2",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "10",
+          "LoopCountText": "1",
+          "Steps": []
+        },
+        {
+          "IsActive": true,
+          "RightTimeText": "2.0",
+          "LeftTimeText": "0.1",
+          "MidPauseTimeText": "0.0",
+          "IntervalAfterText": "0.1",
+          "IsTimedLoop": true,
+          "LoopIntervalText": "15",
+          "LoopCountText": "1",
+          "Steps": []
         }
       ],
       "patrol_pause_others": false,

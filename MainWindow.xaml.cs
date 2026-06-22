@@ -550,7 +550,6 @@ namespace ArtaleProBuff
             _cropW = _config.exp_crop_w;
             _cropH = _config.exp_crop_h;
             
-            chkPatrolPauseOthers.IsChecked = _config.patrol_pause_others;
             txtPatrolFluct.Text = _config.patrol_fluct;
             
             _cards.Clear();
@@ -613,7 +612,7 @@ namespace ArtaleProBuff
             _config.exp_crop_w = _cropW;
             _config.exp_crop_h = _cropH;
             
-            _config.patrol_pause_others = chkPatrolPauseOthers.IsChecked == true;
+            _config.patrol_pause_others = false;
             _config.patrol_fluct = txtPatrolFluct.Text.Trim();
             
             _config.cards = _cards.ToList();
@@ -696,7 +695,7 @@ namespace ArtaleProBuff
             
             _isGloballyPaused = false;
             _isPatrolMoving = false;
-            _shouldPauseOthersDuringPatrol = chkPatrolPauseOthers.IsChecked == true;
+            _shouldPauseOthersDuringPatrol = false;
             
             _isRunningGlobal = true;
             btnStart.IsEnabled = false;
@@ -1114,6 +1113,7 @@ namespace ArtaleProBuff
                     {
                         UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
                         g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向右 {actualDuration:F1}秒";
+                        _shouldPauseOthersDuringPatrol = g.PauseOthersDuringMove;
                         _isPatrolMoving = true;
                         PressKeySafe("right");
                         try
@@ -1124,12 +1124,14 @@ namespace ArtaleProBuff
                         {
                             ReleaseKeySafe("right");
                             _isPatrolMoving = false;
+                            _shouldPauseOthersDuringPatrol = false;
                         }
                     }
                     else if (dir == "左")
                     {
                         UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
                         g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向左 {actualDuration:F1}秒";
+                        _shouldPauseOthersDuringPatrol = g.PauseOthersDuringMove;
                         _isPatrolMoving = true;
                         PressKeySafe("left");
                         try
@@ -1140,6 +1142,7 @@ namespace ArtaleProBuff
                         {
                             ReleaseKeySafe("left");
                             _isPatrolMoving = false;
+                            _shouldPauseOthersDuringPatrol = false;
                         }
                     }
                 }
@@ -1261,6 +1264,7 @@ namespace ArtaleProBuff
                 finally
                 {
                     _isPatrolMoving = false;
+                    _shouldPauseOthersDuringPatrol = false;
                     ReleaseKeySafe("right");
                     ReleaseKeySafe("left");
                     foreach (var g in _patrolGroups)
@@ -1844,7 +1848,7 @@ namespace ArtaleProBuff
                 exp_crop_y = _cropY,
                 exp_crop_w = _cropW,
                 exp_crop_h = _cropH,
-                patrol_pause_others = chkPatrolPauseOthers.IsChecked == true,
+                patrol_pause_others = false,
                 patrol_fluct = txtPatrolFluct.Text.Trim(),
                 cards = _cards.ToList(),
                 patrol_groups = _patrolGroups.ToList()
@@ -1882,7 +1886,6 @@ namespace ArtaleProBuff
                 _cropW = preset.exp_crop_w;
                 _cropH = preset.exp_crop_h;
                 
-                chkPatrolPauseOthers.IsChecked = preset.patrol_pause_others;
                 txtPatrolFluct.Text = preset.patrol_fluct;
                 
                 _cards.Clear();
@@ -1995,7 +1998,6 @@ namespace ArtaleProBuff
                     _cropW = preset.exp_crop_w;
                     _cropH = preset.exp_crop_h;
                     
-                    chkPatrolPauseOthers.IsChecked = preset.patrol_pause_others;
                     txtPatrolFluct.Text = preset.patrol_fluct;
                     
                     _cards.Clear();

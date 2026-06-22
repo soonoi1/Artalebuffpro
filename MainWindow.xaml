@@ -67,7 +67,7 @@
                                     <!-- Delay Setting -->
                                     <StackPanel Grid.Row="0" Grid.Column="0" Margin="4">
                                         <TextBlock Text="启动延时 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                        <ui:TextBox x:Name="txtGlobalDelay" Text="0" Width="100" HorizontalAlignment="Left" />
+                                        <ui:TextBox x:Name="txtGlobalDelay" Text="0" MinWidth="100" HorizontalAlignment="Left" Padding="4,4,4,4" />
                                     </StackPanel>
 
                                     <!-- Background Mode -->
@@ -118,15 +118,15 @@
                                                     </Grid.ColumnDefinitions>
                                                     <StackPanel Grid.Column="0" Margin="2">
                                                         <TextBlock Text="按键" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding Key, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
+                                                        <ui:TextBox Text="{Binding Key, Mode=TwoWay}" HorizontalContentAlignment="Center" Padding="4,4,4,4"/>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Margin="2">
                                                         <TextBlock Text="间隔 (秒)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding IntervalText, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
+                                                        <ui:TextBox Text="{Binding IntervalText, Mode=TwoWay}" HorizontalContentAlignment="Center" Padding="4,4,4,4"/>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2" Margin="2">
                                                         <TextBlock Text="波动 (%)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding FluctuationText, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
+                                                        <ui:TextBox Text="{Binding FluctuationText, Mode=TwoWay}" HorizontalContentAlignment="Center" Padding="4,4,4,4"/>
                                                     </StackPanel>
                                                 </Grid>
 
@@ -142,7 +142,7 @@
                                                     </CheckBox>
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0" IsEnabled="{Binding IsLongPress}">
                                                         <TextBlock Text="时长:" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,4,0"/>
-                                                        <ui:TextBox Text="{Binding HoldTimeText, Mode=TwoWay}" Width="60" HorizontalContentAlignment="Center" VerticalAlignment="Center" />
+                                                        <ui:TextBox Text="{Binding HoldTimeText, Mode=TwoWay}" MinWidth="60" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Center" Padding="4,4,4,4" />
                                                     </StackPanel>
                                                     <CheckBox Grid.Column="2" IsChecked="{Binding IsExclusive, Mode=TwoWay}" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                         <TextBlock Text="独占执行" Style="{StaticResource CaptionTextBlockStyle}"/>
@@ -183,16 +183,13 @@
                             <!-- Patrol global options -->
                             <ui:Card Padding="12">
                                 <StackPanel local:StackPanelHelper.Spacing="8">
-                                    <CheckBox x:Name="chkPatrolPauseOthers" IsChecked="True">
-                                        <TextBlock Text="巡逻移动时暂停其他技能按键触发" Style="{StaticResource CaptionTextBlockStyle}"/>
-                                    </CheckBox>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="间隔随机波动 (%):" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                        <ui:TextBox Grid.Column="1" x:Name="txtPatrolFluct" Text="10" Width="80" HorizontalContentAlignment="Center" Margin="10,0,0,0"/>
+                                        <ui:TextBox Grid.Column="1" x:Name="txtPatrolFluct" Text="10" MinWidth="80" HorizontalAlignment="Left" HorizontalContentAlignment="Center" Margin="10,0,0,0" Padding="4,4,4,4"/>
                                     </Grid>
                                 </StackPanel>
                             </ui:Card>
@@ -205,10 +202,18 @@
                                             <StackPanel local:StackPanelHelper.Spacing="6">
                                                 <!-- Header -->
                                                 <Grid>
-                                                    <CheckBox IsChecked="{Binding IsActive, Mode=TwoWay}" VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsActive, Mode=TwoWay}" VerticalAlignment="Center">
                                                         <TextBlock Text="启用此巡逻组" FontWeight="SemiBold" FontSize="13"/>
                                                     </CheckBox>
-                                                    <ui:Button Content="×" FontSize="14" FontWeight="Bold" Padding="4,2,4,2" HorizontalAlignment="Right" Appearance="Transparent" Click="BtnDeletePatrolGroup_Click" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+                                                    <CheckBox Grid.Column="1" IsChecked="{Binding PauseOthersDuringMove, Mode=TwoWay}" VerticalAlignment="Center" Margin="20,0,0,0">
+                                                        <TextBlock Text="移动时暂停其他技能按键" Style="{StaticResource CaptionTextBlockStyle}"/>
+                                                    </CheckBox>
+                                                    <ui:Button Grid.Column="2" Content="×" FontSize="14" FontWeight="Bold" Padding="4,2,4,2" HorizontalAlignment="Right" Appearance="Transparent" Click="BtnDeletePatrolGroup_Click" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
                                                 </Grid>
 
                                                 <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,2,0,4"/>
@@ -223,29 +228,34 @@
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="Auto" />
                                                                         <ColumnDefinition Width="Auto" />
-                                                                        <ColumnDefinition Width="Auto" />
-                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
                                                                         <ColumnDefinition Width="Auto" />
                                                                         <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
                                                                         <ColumnDefinition Width="Auto" />
                                                                     </Grid.ColumnDefinitions>
                                                                     
                                                                     <!-- Direction -->
-                                                                    <ComboBox Grid.Column="0" SelectedValue="{Binding Direction, Mode=TwoWay}" SelectedValuePath="Tag" Width="90" Padding="6,4,6,4" VerticalAlignment="Center">
+                                                                    <ComboBox Grid.Column="0" SelectedValue="{Binding Direction, Mode=TwoWay}" SelectedValuePath="Tag" Width="95" Padding="6,4,6,4" VerticalAlignment="Center">
+                                                                        <ComboBoxItem Content="向右走" Tag="走右" />
+                                                                        <ComboBoxItem Content="向左走" Tag="走左" />
                                                                         <ComboBoxItem Content="向右走" Tag="右" />
                                                                         <ComboBoxItem Content="向左走" Tag="左" />
                                                                     </ComboBox>
                                                                     
                                                                     <!-- Walk Duration -->
                                                                     <TextBlock Grid.Column="1" Text="走 (秒):" VerticalAlignment="Center" Margin="10,0,5,0" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                                    <ui:TextBox Grid.Column="2" Text="{Binding DurationText, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" VerticalAlignment="Center" />
+                                                                    <ui:TextBox Grid.Column="2" Text="{Binding DurationText, Mode=TwoWay}" MinWidth="60" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Center" Padding="4,4,4,4" />
                                                                     
                                                                     <!-- Pause Duration -->
                                                                     <TextBlock Grid.Column="3" Text="停 (秒):" VerticalAlignment="Center" Margin="10,0,5,0" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                                    <ui:TextBox Grid.Column="4" Text="{Binding PauseAfterText, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" VerticalAlignment="Center" />
+                                                                    <ui:TextBox Grid.Column="4" Text="{Binding PauseAfterText, Mode=TwoWay}" MinWidth="60" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Center" Padding="4,4,4,4" />
+                                                                    
+                                                                    <!-- Spacer -->
+                                                                    <Border Grid.Column="5" Width="10" />
                                                                     
                                                                     <!-- Delete Step Button -->
-                                                                    <ui:Button Grid.Column="6" Content="删除" Click="BtnDeletePatrolStep_Click" Margin="10,0,0,0" Padding="8,4,8,4" VerticalAlignment="Center" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                    <ui:Button Grid.Column="6" Content="删除" Click="BtnDeletePatrolStep_Click" Padding="8,4,8,4" VerticalAlignment="Center" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
                                                                 </Grid>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
@@ -261,7 +271,7 @@
                                                         <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Grid.Column="0" Text="组后间隔时间 (秒):" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                    <ui:TextBox Grid.Column="1" Text="{Binding IntervalAfterText, Mode=TwoWay}" Width="80" HorizontalContentAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0"/>
+                                                    <ui:TextBox Grid.Column="1" Text="{Binding IntervalAfterText, Mode=TwoWay}" MinWidth="80" MaxWidth="150" HorizontalContentAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" Padding="4,4,4,4"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Status}" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorBrush}"/>
                                                 </Grid>
 
@@ -270,15 +280,15 @@
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
                                                     <CheckBox Grid.Column="0" Content="定时循环" IsChecked="{Binding IsTimedLoop, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11" />
                                                     <TextBlock Grid.Column="1" Text="每隔 (秒):" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsEnabled="{Binding IsTimedLoop}"/>
-                                                    <ui:TextBox Grid.Column="2" Text="{Binding LoopIntervalText, Mode=TwoWay}" Width="55" HorizontalContentAlignment="Center" Margin="5,0,15,0" IsEnabled="{Binding IsTimedLoop}"/>
+                                                    <ui:TextBox Grid.Column="2" Text="{Binding LoopIntervalText, Mode=TwoWay}" MinWidth="60" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="5,0,15,0" IsEnabled="{Binding IsTimedLoop}" Padding="4,4,4,4"/>
                                                     <TextBlock Grid.Column="3" Text="单次执行次数:" VerticalAlignment="Center" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsEnabled="{Binding IsTimedLoop}"/>
-                                                    <ui:TextBox Grid.Column="4" Text="{Binding LoopCountText, Mode=TwoWay}" Width="45" HorizontalContentAlignment="Center" HorizontalAlignment="Left" Margin="5,0,0,0" IsEnabled="{Binding IsTimedLoop}"/>
+                                                    <ui:TextBox Grid.Column="4" Text="{Binding LoopCountText, Mode=TwoWay}" MinWidth="60" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="5,0,0,0" IsEnabled="{Binding IsTimedLoop}" Padding="4,4,4,4"/>
                                                 </Grid>
                                             </StackPanel>
                                         </ui:Card>
@@ -318,7 +328,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <ui:TextBox Grid.Column="0" x:Name="txtPresetName" Text="预设方案1" />
+                                        <ui:TextBox Grid.Column="0" x:Name="txtPresetName" Text="预设方案1" Padding="4,4,4,4"/>
                                         <ui:Button Grid.Column="1" Content="保存当前配置" Icon="{ui:SymbolIcon SaveCopy24}" Click="BtnSavePreset_Click" Margin="10,0,0,0" Appearance="Primary"/>
                                     </Grid>
                                 </StackPanel>
@@ -380,7 +390,7 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="超时判定时间阈值 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                <ui:TextBox x:Name="txtExpTimeout" Text="15" Width="100" HorizontalAlignment="Left" />
+                                                <ui:TextBox x:Name="txtExpTimeout" Text="15" MinWidth="100" HorizontalAlignment="Left" Padding="4,4,4,4" />
                                             </StackPanel>
                                             <ui:Button Grid.Column="1" Content="选择经验值监控区域" Icon="{ui:SymbolIcon Crop24}" Click="BtnSelectExpRegion_Click" VerticalAlignment="Bottom" Appearance="Primary" />
                                         </Grid>

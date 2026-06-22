@@ -20,6 +20,7 @@ namespace ArtaleProBuff
         private string _status = "等待运行";
         private DateTime _nextRunTime = DateTime.MinValue;
         private ObservableCollection<PatrolStepViewModel> _steps = new ObservableCollection<PatrolStepViewModel>();
+        private bool _pauseOthersDuringMove = true;
 
         public bool IsActive
         {
@@ -116,6 +117,12 @@ namespace ArtaleProBuff
                     Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = "2.0", PauseAfterText = "0.0" });
                 }
             }
+        }
+
+        public bool PauseOthersDuringMove
+        {
+            get => _pauseOthersDuringMove;
+            set => SetField(ref _pauseOthersDuringMove, value);
         }
 
         [JsonIgnore]
