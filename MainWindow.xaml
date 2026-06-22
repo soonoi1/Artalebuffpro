@@ -580,6 +580,86 @@
                                     </Border>
                                 </StackPanel>
                             </ui:CardExpander>
+
+                            <!-- 快速随机换线宏 -->
+                            <ui:CardExpander Header="⚡ 快速随机换线宏 (鼠标依次点击3个位置)" Icon="{ui:SymbolIcon ArrowSwap24}" IsExpanded="True" Margin="0,10,0,0">
+                                <StackPanel local:StackPanelHelper.Spacing="10" Margin="0,6,0,0">
+                                    <TextBlock Text="可以配置快捷键（如 Alt+F12）来触发依次自动点击3个换线点（延时各 0.5 秒），执行时亦会清空当前怪物计数。请先录制好三个点的窗口相对坐标。" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                                    <!-- Enable and Hotkey Setup -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <ui:ToggleSwitch x:Name="switchChannelMacro" Content="启用快捷换线宏" Checked="SwitchChannelMacro_Changed" Unchecked="SwitchChannelMacro_Changed" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" local:StackPanelHelper.Spacing="8">
+                                            <TextBlock Text="触发快捷键:" VerticalAlignment="Center" Style="{StaticResource BodyTextBlockStyle}"/>
+                                            <CheckBox x:Name="chkChannelMacroAlt" Content="Alt" Checked="ChannelMacroHotkey_Changed" Unchecked="ChannelMacroHotkey_Changed" VerticalAlignment="Center"/>
+                                            <CheckBox x:Name="chkChannelMacroCtrl" Content="Ctrl" Checked="ChannelMacroHotkey_Changed" Unchecked="ChannelMacroHotkey_Changed" VerticalAlignment="Center"/>
+                                            <CheckBox x:Name="chkChannelMacroShift" Content="Shift" Checked="ChannelMacroHotkey_Changed" Unchecked="ChannelMacroHotkey_Changed" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="comboChannelMacroKey" Width="80" SelectionChanged="ChannelMacroHotkey_Changed" Height="32"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Separator Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,5" />
+
+                                    <!-- Click Points Calibration -->
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Point 1 -->
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8" local:StackPanelHelper.Spacing="10">
+                                            <TextBlock Text="点击位置 1 (设置图标):" Width="140" VerticalAlignment="Center"/>
+                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick1X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick1Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                        </StackPanel>
+                                        <ui:Button x:Name="btnRecordClick1" Grid.Row="0" Grid.Column="1" Content="🎯 录制位置 1" Click="BtnRecordClick1_Click" Width="120" Height="32" Margin="0,0,0,8"/>
+
+                                        <!-- Point 2 -->
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8" local:StackPanelHelper.Spacing="10">
+                                            <TextBlock Text="点击位置 2 (换线图标):" Width="140" VerticalAlignment="Center"/>
+                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick2X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick2Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                        </StackPanel>
+                                        <ui:Button x:Name="btnRecordClick2" Grid.Row="1" Grid.Column="1" Content="🎯 录制位置 2" Click="BtnRecordClick2_Click" Width="120" Height="32" Margin="0,0,0,8"/>
+
+                                        <!-- Point 3 -->
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" local:StackPanelHelper.Spacing="10">
+                                            <TextBlock Text="点击位置 3 (确定按钮):" Width="140" VerticalAlignment="Center"/>
+                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick3X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                            <ui:TextBox x:Name="txtClick3Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
+                                        </StackPanel>
+                                        <ui:Button x:Name="btnRecordClick3" Grid.Row="2" Grid.Column="1" Content="🎯 录制位置 3" Click="BtnRecordClick3_Click" Width="120" Height="32"/>
+                                    </Grid>
+
+                                    <!-- Status & Test -->
+                                    <Grid Margin="0,5,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="txtChannelMacroStatus" Text="状态: 空闲" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <ui:Button Grid.Column="1" Content="▶ 立即测试换线" Click="BtnTestChannelMacro_Click" Width="130" Height="36" Appearance="Secondary"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:CardExpander>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

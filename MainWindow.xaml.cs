@@ -36,6 +36,9 @@ namespace ArtaleProBuff
         private const int HOTKEY_START_ID = 9001;
         private const int HOTKEY_STOP_ID = 9002;
         private const int HOTKEY_RESET_ID = 9003;
+        private const int HOTKEY_CHANNEL_MACRO_ID = 9004;
+        private const int HOTKEY_CALIBRATE_ID = 2000;
+        private int _recordingPointIndex = 0;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
@@ -61,6 +64,19 @@ namespace ArtaleProBuff
             public uint biClrUsed;
             public uint biClrImportant;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -489,6 +505,7 @@ namespace ArtaleProBuff
             RegisterHotKey(_hwnd, HOTKEY_START_ID, 0, 0x78); // F9
             RegisterHotKey(_hwnd, HOTKEY_STOP_ID, 0, 0x79);  // F10
             RegisterHotKey(_hwnd, HOTKEY_RESET_ID, 0, 0x7A); // F11
+            RegisterChannelMacroHotkey();
             
             StartGlobalMonitorLoop();
         }
@@ -504,6 +521,8 @@ namespace ArtaleProBuff
                 UnregisterHotKey(_hwnd, HOTKEY_START_ID);
                 UnregisterHotKey(_hwnd, HOTKEY_STOP_ID);
                 UnregisterHotKey(_hwnd, HOTKEY_RESET_ID);
+                UnregisterHotKey(_hwnd, HOTKEY_CHANNEL_MACRO_ID);
+                UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
             }
             StopAll();
         }
@@ -526,6 +545,16 @@ namespace ArtaleProBuff
                 else if (id == HOTKEY_RESET_ID)
                 {
                     ResetBossHuntCount();
+                    handled = true;
+                }
+                else if (id == HOTKEY_CHANNEL_MACRO_ID)
+                {
+                    Task.Run(async () => await RunChannelChangeMacroAsync());
+                    handled = true;
+                }
+                else if (id == HOTKEY_CALIBRATE_ID)
+                {
+                    HandleCalibrateHotkey();
                     handled = true;
                 }
             }
@@ -632,10 +661,47 @@ namespace ArtaleProBuff
             }
             
             // Initialize boss hunt map database
-            if (_config.boss_hunt_map_exp == null)
+            if (_config.boss_hunt_map_exps == null)
             {
-                _config.boss_hunt_map_exp = new Dictionary<string, double>();
+                _config.boss_hunt_map_exps = new Dictionary<string, List<double>>();
             }
+            if (_config.boss_hunt_map_exp != null && _config.boss_hunt_map_exp.Count > 0)
+            {
+                foreach (var kvp in _config.boss_hunt_map_exp)
+                {
+                    if (!_config.boss_hunt_map_exps.ContainsKey(kvp.Key))
+                    {
+                        _config.boss_hunt_map_exps[kvp.Key] = new List<double> { kvp.Value };
+                    }
+                    else
+                    {
+                        var list = _config.boss_hunt_map_exps[kvp.Key];
+                        if (!list.Contains(kvp.Value))
+                        {
+                            list.Add(kvp.Value);
+                        }
+                    }
+                }
+                _config.boss_hunt_map_exp.Clear();
+                ConfigHelper.Save(_config);
+            }
+
+            // Macro config loading
+            switchChannelMacro.IsChecked = _config.channel_macro_enabled;
+            chkChannelMacroAlt.IsChecked = _config.channel_macro_alt;
+            chkChannelMacroCtrl.IsChecked = _config.channel_macro_ctrl;
+            chkChannelMacroShift.IsChecked = _config.channel_macro_shift;
+
+            comboChannelMacroKey.ItemsSource = new List<string> { "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" };
+            comboChannelMacroKey.SelectedItem = _config.channel_macro_key ?? "F12";
+
+            txtClick1X.Text = _config.channel_click1_x.ToString();
+            txtClick1Y.Text = _config.channel_click1_y.ToString();
+            txtClick2X.Text = _config.channel_click2_x.ToString();
+            txtClick2Y.Text = _config.channel_click2_y.ToString();
+            txtClick3X.Text = _config.channel_click3_x.ToString();
+            txtClick3Y.Text = _config.channel_click3_y.ToString();
+
             RefreshBossHuntMapsCombo("");
             
             ToggleBgFields();
@@ -1323,12 +1389,12 @@ namespace ArtaleProBuff
 
             Task.Run(async () =>
             {
-                int staticSec = 0;
+                double staticSec = 0;
                 try
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        await Task.Delay(1500, token);
+                        await Task.Delay(500, token);
 
                         IntPtr hwnd = GetTargetHwnd();
                         if (hwnd == IntPtr.Zero)
@@ -1343,7 +1409,7 @@ namespace ArtaleProBuff
                             {
                                 double expTimeout = 15;
                                 UpdateUi(() => double.TryParse(txtExpTimeout.Text, out expTimeout));
-                                staticSec += 2;
+                                staticSec += 0.5;
                                 if (staticSec >= expTimeout)
                                 {
                                     HandleExpTimeout(hwnd);
@@ -1376,7 +1442,7 @@ namespace ArtaleProBuff
 
                         if (_isRunningGlobal && !_isGloballyPaused)
                         {
-                            _totalGrindingSeconds += 1.5;
+                            _totalGrindingSeconds += 0.5;
                         }
 
                         // Perform OCR on the cropped bitmap
@@ -1538,10 +1604,10 @@ namespace ArtaleProBuff
                             }
                             else
                             {
-                                staticSec += 2; // Approx 1.5s delay
+                                staticSec += 0.5; // Approx 0.5s delay
                                 UpdateUi(() => {
-                                    txtExpStatus.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)";
-                                    if (txtExpStatusBH != null) txtExpStatusBH.Text = $"停滞无变化 ({staticSec}秒 / {expTimeout}秒)";
+                                    txtExpStatus.Text = $"停滞无变化 ({staticSec:F1}秒 / {expTimeout}秒)";
+                                    if (txtExpStatusBH != null) txtExpStatusBH.Text = $"停滞无变化 ({staticSec:F1}秒 / {expTimeout}秒)";
                                 });
 
                                 if (staticSec >= expTimeout)
@@ -2398,6 +2464,24 @@ namespace ArtaleProBuff
             ResetBossHuntCount();
         }
 
+        private void UpdateBossHuntExpDisplay(string mapName)
+        {
+            if (_config.boss_hunt_map_exps.TryGetValue(mapName, out var list) && list.Count > 0)
+            {
+                double first = list[0];
+                bool isPercent = _initialExpIsPercent || first < 1.0;
+                txtBossHuntMonsterExp.Text = isPercent ? $"{first:F4}" : $"{first:F1}";
+                
+                string expsStr = string.Join(", ", list.Select(x => isPercent ? $"{x:F4}%" : $"{x:F1}"));
+                txtBossHuntStatus.Text = $"地图 '{mapName}' 已记录经验值: {expsStr}";
+            }
+            else
+            {
+                txtBossHuntMonsterExp.Text = "";
+                txtBossHuntStatus.Text = "未记录怪物经验，击杀怪物以自动记录。";
+            }
+        }
+
         private void BtnLockBossHuntExp_Click(object sender, RoutedEventArgs e)
         {
             if (_bossHuntLastDiff > 0)
@@ -2405,13 +2489,33 @@ namespace ArtaleProBuff
                 bool isPercent = _initialExpIsPercent || _bossHuntLastDiff < 1.0;
                 txtBossHuntMonsterExp.Text = isPercent ? $"{_bossHuntLastDiff:F4}" : $"{_bossHuntLastDiff:F1}";
                 
-                // Save immediately
                 string mapName = comboBossHuntMap.Text.Trim();
                 if (!string.IsNullOrEmpty(mapName))
                 {
-                    _config.boss_hunt_map_exp[mapName] = _bossHuntLastDiff;
+                    if (!_config.boss_hunt_map_exps.ContainsKey(mapName))
+                    {
+                        _config.boss_hunt_map_exps[mapName] = new List<double>();
+                    }
+                    
+                    bool exists = false;
+                    foreach (var recExp in _config.boss_hunt_map_exps[mapName])
+                    {
+                        double diffAbs = Math.Abs(_bossHuntLastDiff - recExp);
+                        if (isPercent ? (diffAbs < 0.00015) : (diffAbs < 0.5))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists)
+                    {
+                        _config.boss_hunt_map_exps[mapName].Add(_bossHuntLastDiff);
+                    }
+
                     ConfigHelper.Save(_config);
                     RefreshBossHuntMapsCombo(mapName);
+                    UpdateBossHuntExpDisplay(mapName);
                 }
             }
         }
@@ -2426,10 +2530,32 @@ namespace ArtaleProBuff
             }
             if (double.TryParse(txtBossHuntMonsterExp.Text, out double exp) && exp > 0)
             {
-                _config.boss_hunt_map_exp[mapName] = exp;
+                if (!_config.boss_hunt_map_exps.ContainsKey(mapName))
+                {
+                    _config.boss_hunt_map_exps[mapName] = new List<double>();
+                }
+                
+                bool exists = false;
+                bool isPercent = _initialExpIsPercent || exp < 1.0;
+                foreach (var recExp in _config.boss_hunt_map_exps[mapName])
+                {
+                    double diffAbs = Math.Abs(exp - recExp);
+                    if (isPercent ? (diffAbs < 0.00015) : (diffAbs < 0.5))
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists)
+                {
+                    _config.boss_hunt_map_exps[mapName].Add(exp);
+                }
+
                 ConfigHelper.Save(_config);
                 RefreshBossHuntMapsCombo(mapName);
-                System.Windows.MessageBox.Show(this, $"地图 '{mapName}' 单只怪物经验值 {exp} 已保存！", "保存成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                UpdateBossHuntExpDisplay(mapName);
+                System.Windows.MessageBox.Show(this, $"地图 '{mapName}' 怪物经验值 {exp} 已保存！", "保存成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -2442,15 +2568,16 @@ namespace ArtaleProBuff
             string mapName = comboBossHuntMap.Text.Trim();
             if (string.IsNullOrEmpty(mapName)) return;
             
-            if (_config.boss_hunt_map_exp.ContainsKey(mapName))
+            if (_config.boss_hunt_map_exps.ContainsKey(mapName))
             {
                 var result = System.Windows.MessageBox.Show(this, $"确定要删除地图 '{mapName}' 的记录吗？", "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.Yes)
                 {
-                    _config.boss_hunt_map_exp.Remove(mapName);
+                    _config.boss_hunt_map_exps.Remove(mapName);
                     ConfigHelper.Save(_config);
                     RefreshBossHuntMapsCombo("");
                     txtBossHuntMonsterExp.Text = "";
+                    txtBossHuntStatus.Text = "已删除地图记录";
                 }
             }
         }
@@ -2460,11 +2587,7 @@ namespace ArtaleProBuff
             if (comboBossHuntMap.SelectedItem != null)
             {
                 string mapName = comboBossHuntMap.SelectedItem.ToString();
-                if (_config.boss_hunt_map_exp.TryGetValue(mapName, out double exp))
-                {
-                    bool isPercent = _initialExpIsPercent || exp < 1.0;
-                    txtBossHuntMonsterExp.Text = isPercent ? $"{exp:F4}" : $"{exp:F1}";
-                }
+                UpdateBossHuntExpDisplay(mapName);
             }
         }
 
@@ -2473,18 +2596,17 @@ namespace ArtaleProBuff
             string mapName = comboBossHuntMap.Text.Trim();
             if (string.IsNullOrEmpty(mapName)) return;
             
-            if (_config.boss_hunt_map_exp.TryGetValue(mapName, out double exp))
+            if (_config.boss_hunt_map_exps.ContainsKey(mapName))
             {
-                bool isPercent = _initialExpIsPercent || exp < 1.0;
-                txtBossHuntMonsterExp.Text = isPercent ? $"{exp:F4}" : $"{exp:F1}";
+                UpdateBossHuntExpDisplay(mapName);
             }
         }
 
         private void RefreshBossHuntMapsCombo(string selectedMap)
         {
-            if (_config.boss_hunt_map_exp != null)
+            if (_config.boss_hunt_map_exps != null)
             {
-                comboBossHuntMap.ItemsSource = _config.boss_hunt_map_exp.Keys.ToList();
+                comboBossHuntMap.ItemsSource = _config.boss_hunt_map_exps.Keys.ToList();
                 if (!string.IsNullOrEmpty(selectedMap))
                 {
                     comboBossHuntMap.Text = selectedMap;
@@ -2499,35 +2621,112 @@ namespace ArtaleProBuff
                 _bossHuntLastDiff = expDiff;
                 txtBossHuntLastDiff.Text = isPercent ? $"{expDiff:F4}%" : $"{expDiff:F1}";
 
-                string expText = txtBossHuntMonsterExp.Text.Trim();
-                double mobExp = 0;
-                
-                if (string.IsNullOrEmpty(expText) || !double.TryParse(expText, out mobExp) || mobExp <= 0)
+                string currentMapName = comboBossHuntMap.Text.Trim();
+                string matchedMap = null;
+                double matchedExp = 0;
+                bool foundMatch = false;
+
+                // 1. Search current map's exps first for a match
+                if (!string.IsNullOrEmpty(currentMapName) && _config.boss_hunt_map_exps.TryGetValue(currentMapName, out var currentList))
                 {
-                    mobExp = expDiff;
-                    txtBossHuntMonsterExp.Text = isPercent ? $"{mobExp:F4}" : $"{mobExp:F1}";
-                    
-                    string mapName = comboBossHuntMap.Text.Trim();
-                    if (!string.IsNullOrEmpty(mapName))
+                    foreach (var recExp in currentList)
                     {
-                        _config.boss_hunt_map_exp[mapName] = mobExp;
-                        ConfigHelper.Save(_config);
-                        RefreshBossHuntMapsCombo(mapName);
+                        double diffAbs = Math.Abs(expDiff - recExp);
+                        bool isMatch = isPercent ? (diffAbs < 0.00015) : (diffAbs < 0.5);
+                        if (isMatch)
+                        {
+                            matchedMap = currentMapName;
+                            matchedExp = recExp;
+                            foundMatch = true;
+                            break;
+                        }
                     }
                 }
 
-                if (mobExp > 0)
+                // 2. Search other maps' exps for a match
+                if (!foundMatch)
                 {
-                    int killsThisTime = (int)Math.Round(expDiff / mobExp);
-                    if (killsThisTime < 1) killsThisTime = 1;
+                    foreach (var kvp in _config.boss_hunt_map_exps)
+                    {
+                        if (kvp.Key == currentMapName) continue;
+                        foreach (var recExp in kvp.Value)
+                        {
+                            double diffAbs = Math.Abs(expDiff - recExp);
+                            bool isMatch = isPercent ? (diffAbs < 0.00015) : (diffAbs < 0.5);
+                            if (isMatch)
+                            {
+                                matchedMap = kvp.Key;
+                                matchedExp = recExp;
+                                foundMatch = true;
+                                break;
+                            }
+                        }
+                        if (foundMatch) break;
+                    }
+                }
+
+                // 3. If no match, check if it's a multiple of an existing exp on the current map
+                if (!foundMatch && !string.IsNullOrEmpty(currentMapName))
+                {
+                    if (_config.boss_hunt_map_exps.TryGetValue(currentMapName, out var currentList2))
+                    {
+                        foreach (var recExp in currentList2)
+                        {
+                            if (recExp <= 0) continue;
+                            if (expDiff > recExp)
+                            {
+                                double ratio = expDiff / recExp;
+                                double roundedRatio = Math.Round(ratio);
+                                if (roundedRatio >= 2 && Math.Abs(ratio - roundedRatio) < 0.02)
+                                {
+                                    matchedMap = currentMapName;
+                                    matchedExp = recExp;
+                                    foundMatch = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. If still no match and we have a current map, record it as a new exp value for this map
+                if (!foundMatch && !string.IsNullOrEmpty(currentMapName))
+                {
+                    if (!_config.boss_hunt_map_exps.ContainsKey(currentMapName))
+                    {
+                        _config.boss_hunt_map_exps[currentMapName] = new List<double>();
+                    }
+                    _config.boss_hunt_map_exps[currentMapName].Add(expDiff);
+                    ConfigHelper.Save(_config);
+
+                    matchedMap = currentMapName;
+                    matchedExp = expDiff;
+                    foundMatch = true;
+
+                    RefreshBossHuntMapsCombo(currentMapName);
+                    UpdateBossHuntExpDisplay(currentMapName);
+                }
+
+                if (foundMatch)
+                {
+                    if (comboBossHuntMap.Text.Trim() != matchedMap)
+                    {
+                        comboBossHuntMap.Text = matchedMap;
+                        comboBossHuntMap.SelectedItem = matchedMap;
+                    }
                     
+                    txtBossHuntMonsterExp.Text = isPercent ? $"{matchedExp:F4}" : $"{matchedExp:F1}";
+
+                    int killsThisTime = (int)Math.Round(expDiff / matchedExp);
+                    if (killsThisTime < 1) killsThisTime = 1;
+
                     _bossHuntKills += killsThisTime;
                     txtBossHuntKills.Text = $"{_bossHuntKills} / 10";
-                    
+
                     if (_bossHuntKills >= 10)
                     {
                         txtBossHuntKills.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
-                        txtBossHuntStatus.Text = "已满 10 只小怪！可以换线或观察王痕。";
+                        txtBossHuntStatus.Text = $"已满 {_bossHuntKills} 只小怪！可以换线或观察王痕。";
                         txtBossHuntStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
                         
                         try
@@ -2539,11 +2738,247 @@ namespace ArtaleProBuff
                     else
                     {
                         txtBossHuntKills.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
-                        txtBossHuntStatus.Text = $"已击杀 {_bossHuntKills} 只，还需 {10 - _bossHuntKills} 只。";
                         txtBossHuntStatus.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
+                        
+                        if (_config.boss_hunt_map_exps.TryGetValue(matchedMap, out var list))
+                        {
+                            string expsStr = string.Join(", ", list.Select(x => isPercent ? $"{x:F4}%" : $"{x:F1}"));
+                            txtBossHuntStatus.Text = $"当前地图 '{matchedMap}' ({expsStr})，本次击杀 +{killsThisTime}";
+                        }
+                        else
+                        {
+                            txtBossHuntStatus.Text = $"当前地图 '{matchedMap}'，本次击杀 +{killsThisTime}";
+                        }
                     }
                 }
+                else
+                {
+                    txtBossHuntStatus.Text = "未选择地图，且经验变动未匹配任何已知地图。";
+                }
             });
+        }
+
+        // ==================== 快速换线宏相关逻辑 ====================
+
+        private void RegisterChannelMacroHotkey()
+        {
+            if (_hwnd == IntPtr.Zero) return;
+            UnregisterHotKey(_hwnd, HOTKEY_CHANNEL_MACRO_ID);
+            
+            if (!_config.channel_macro_enabled) return;
+            
+            uint modifiers = 0;
+            if (_config.channel_macro_alt) modifiers |= 0x0001;
+            if (_config.channel_macro_ctrl) modifiers |= 0x0002;
+            if (_config.channel_macro_shift) modifiers |= 0x0004;
+            
+            uint vk = GetVkFromKeyName(_config.channel_macro_key);
+            if (vk > 0)
+            {
+                RegisterHotKey(_hwnd, HOTKEY_CHANNEL_MACRO_ID, modifiers, vk);
+            }
+        }
+
+        private uint GetVkFromKeyName(string keyName)
+        {
+            if (string.IsNullOrEmpty(keyName)) return 0;
+            string k = keyName.Trim().ToUpper();
+            if (k.StartsWith("F") && k.Length > 1 && int.TryParse(k.Substring(1), out int fNum))
+            {
+                if (fNum >= 1 && fNum <= 12)
+                {
+                    return (uint)(0x6F + fNum);
+                }
+            }
+            if (k.Length == 1)
+            {
+                char c = k[0];
+                if (c >= 'A' && c <= 'Z') return c;
+                if (c >= '0' && c <= '9') return c;
+            }
+            return 0;
+        }
+
+        private void HandleCalibrateHotkey()
+        {
+            if (_recordingPointIndex <= 0) return;
+            
+            UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
+            
+            POINT p;
+            if (GetCursorPos(out p))
+            {
+                IntPtr targetHwnd = GetTargetHwnd();
+                if (targetHwnd != IntPtr.Zero)
+                {
+                    ScreenToClient(targetHwnd, ref p);
+                    
+                    int idx = _recordingPointIndex;
+                    _recordingPointIndex = 0;
+                    
+                    UpdateUi(() =>
+                    {
+                        if (idx == 1)
+                        {
+                            _config.channel_click1_x = p.X;
+                            _config.channel_click1_y = p.Y;
+                            txtClick1X.Text = p.X.ToString();
+                            txtClick1Y.Text = p.Y.ToString();
+                            btnRecordClick1.Content = "🎯 录制位置 1";
+                        }
+                        else if (idx == 2)
+                        {
+                            _config.channel_click2_x = p.X;
+                            _config.channel_click2_y = p.Y;
+                            txtClick2X.Text = p.X.ToString();
+                            txtClick2Y.Text = p.Y.ToString();
+                            btnRecordClick2.Content = "🎯 录制位置 2";
+                        }
+                        else if (idx == 3)
+                        {
+                            _config.channel_click3_x = p.X;
+                            _config.channel_click3_y = p.Y;
+                            txtClick3X.Text = p.X.ToString();
+                            txtClick3Y.Text = p.Y.ToString();
+                            btnRecordClick3.Content = "🎯 录制位置 3";
+                        }
+                        
+                        ConfigHelper.Save(_config);
+                        txtChannelMacroStatus.Text = $"位置 {idx} 录制成功: ({p.X}, {p.Y})";
+                    });
+                }
+                else
+                {
+                    UpdateUi(() =>
+                    {
+                        txtChannelMacroStatus.Text = "录制失败: 未找到游戏窗口";
+                        ResetRecordButtons();
+                    });
+                }
+            }
+            else
+            {
+                UpdateUi(() =>
+                {
+                    txtChannelMacroStatus.Text = "录制失败: 无法获取鼠标坐标";
+                    ResetRecordButtons();
+                });
+            }
+        }
+
+        private void ResetRecordButtons()
+        {
+            _recordingPointIndex = 0;
+            btnRecordClick1.Content = "🎯 录制位置 1";
+            btnRecordClick2.Content = "🎯 录制位置 2";
+            btnRecordClick3.Content = "🎯 录制位置 3";
+        }
+
+        private void StartRecordingPoint(int index)
+        {
+            ResetRecordButtons();
+            _recordingPointIndex = index;
+            
+            if (index == 1) btnRecordClick1.Content = "⏳ 请按F12锁定...";
+            else if (index == 2) btnRecordClick2.Content = "⏳ 请按F12锁定...";
+            else if (index == 3) btnRecordClick3.Content = "⏳ 请按F12锁定...";
+            
+            txtChannelMacroStatus.Text = $"请将鼠标移动到游戏内位置 {index}，然后按下 F12 键锁定坐标！";
+            
+            UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
+            RegisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID, 0, 0x7B);
+        }
+
+        private static void PostMouseClick(IntPtr hwnd, int x, int y)
+        {
+            if (hwnd == IntPtr.Zero) return;
+            IntPtr lParam = (IntPtr)((y << 16) | (x & 0xFFFF));
+            IntPtr wParam = (IntPtr)1;
+            
+            PostMessageToAll(hwnd, 0x0201, wParam, lParam);
+            Thread.Sleep(50);
+            PostMessageToAll(hwnd, 0x0202, IntPtr.Zero, lParam);
+        }
+
+        private async Task RunChannelChangeMacroAsync()
+        {
+            IntPtr hwnd = GetTargetHwnd();
+            if (hwnd == IntPtr.Zero)
+            {
+                UpdateUi(() => txtChannelMacroStatus.Text = "错误: 未找到游戏窗口");
+                return;
+            }
+
+            // Also reset/refresh the boss hunt kills count when starting channel change macro
+            ResetBossHuntCount();
+
+            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 1/3)...");
+            PostMouseClick(hwnd, _config.channel_click1_x, _config.channel_click1_y);
+            await Task.Delay(500);
+
+            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 2/3)...");
+            PostMouseClick(hwnd, _config.channel_click2_x, _config.channel_click2_y);
+            await Task.Delay(500);
+
+            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 3/3)...");
+            PostMouseClick(hwnd, _config.channel_click3_x, _config.channel_click3_y);
+            await Task.Delay(500);
+
+            UpdateUi(() => txtChannelMacroStatus.Text = "换线宏执行完毕，计数器已清空重置");
+        }
+
+        private void SwitchChannelMacro_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return;
+            _config.channel_macro_enabled = switchChannelMacro.IsChecked == true;
+            ConfigHelper.Save(_config);
+            RegisterChannelMacroHotkey();
+        }
+
+        private void ChannelMacroHotkey_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return;
+            _config.channel_macro_alt = chkChannelMacroAlt.IsChecked == true;
+            _config.channel_macro_ctrl = chkChannelMacroCtrl.IsChecked == true;
+            _config.channel_macro_shift = chkChannelMacroShift.IsChecked == true;
+            if (comboChannelMacroKey.SelectedItem != null)
+            {
+                _config.channel_macro_key = comboChannelMacroKey.SelectedItem.ToString();
+            }
+            ConfigHelper.Save(_config);
+            RegisterChannelMacroHotkey();
+        }
+
+        private void ChannelMacroCoords_Changed(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (_config == null) return;
+            if (int.TryParse(txtClick1X.Text, out int c1x)) _config.channel_click1_x = c1x;
+            if (int.TryParse(txtClick1Y.Text, out int c1y)) _config.channel_click1_y = c1y;
+            if (int.TryParse(txtClick2X.Text, out int c2x)) _config.channel_click2_x = c2x;
+            if (int.TryParse(txtClick2Y.Text, out int c2y)) _config.channel_click2_y = c2y;
+            if (int.TryParse(txtClick3X.Text, out int c3x)) _config.channel_click3_x = c3x;
+            if (int.TryParse(txtClick3Y.Text, out int c3y)) _config.channel_click3_y = c3y;
+            ConfigHelper.Save(_config);
+        }
+
+        private void BtnRecordClick1_Click(object sender, RoutedEventArgs e)
+        {
+            StartRecordingPoint(1);
+        }
+
+        private void BtnRecordClick2_Click(object sender, RoutedEventArgs e)
+        {
+            StartRecordingPoint(2);
+        }
+
+        private void BtnRecordClick3_Click(object sender, RoutedEventArgs e)
+        {
+            StartRecordingPoint(3);
+        }
+
+        private void BtnTestChannelMacro_Click(object sender, RoutedEventArgs e)
+        {
+            Task.Run(async () => await RunChannelChangeMacroAsync());
         }
     }
 

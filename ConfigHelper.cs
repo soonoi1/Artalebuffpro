@@ -42,6 +42,18 @@ namespace ArtaleProBuff
         public string patrol_fluct { get; set; } = "10";
         public Dictionary<string, PresetData> presets { get; set; } = new Dictionary<string, PresetData>();
         public Dictionary<string, double> boss_hunt_map_exp { get; set; } = new Dictionary<string, double>();
+        public Dictionary<string, List<double>> boss_hunt_map_exps { get; set; } = new Dictionary<string, List<double>>();
+        public bool channel_macro_enabled { get; set; } = false;
+        public bool channel_macro_alt { get; set; } = true;
+        public bool channel_macro_ctrl { get; set; } = false;
+        public bool channel_macro_shift { get; set; } = false;
+        public string channel_macro_key { get; set; } = "F12";
+        public int channel_click1_x { get; set; } = 965;
+        public int channel_click1_y { get; set; } = 105;
+        public int channel_click2_x { get; set; } = 285;
+        public int channel_click2_y { get; set; } = 540;
+        public int channel_click3_x { get; set; } = 435;
+        public int channel_click3_y { get; set; } = 405;
     }
 
     public static class ConfigHelper
