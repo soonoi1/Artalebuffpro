@@ -540,6 +540,25 @@ namespace ArtaleProBuff
         {
             _config = ConfigHelper.Load();
             
+            if (_config.presets != null)
+            {
+                foreach (var preset in _config.presets.Values)
+                {
+                    if (preset.cards == null)
+                    {
+                        preset.cards = new List<BuffCardViewModel>();
+                    }
+                    if (preset.patrol_groups == null)
+                    {
+                        preset.patrol_groups = new List<PatrolGroupViewModel>();
+                    }
+                    foreach (var g in preset.patrol_groups)
+                    {
+                        g.InitializeStepsFromLegacy();
+                    }
+                }
+            }
+            
             txtGlobalDelay.Text = _config.global_delay;
             switchBgMode.IsChecked = _config.bg_enabled;
             comboBgWindow.Text = _config.bg_title;
@@ -618,8 +637,8 @@ namespace ArtaleProBuff
             _config.patrol_pause_others = false;
             _config.patrol_fluct = txtPatrolFluct.Text.Trim();
             
-            _config.cards = _cards.ToList();
-            _config.patrol_groups = _patrolGroups.ToList();
+            _config.cards = CloneCards(_cards.ToList());
+            _config.patrol_groups = ClonePatrolGroups(_patrolGroups.ToList());
             
             ConfigHelper.Save(_config);
             
@@ -1872,6 +1891,34 @@ namespace ArtaleProBuff
             SaveSettings(false);
         }
 
+        private List<BuffCardViewModel> CloneCards(List<BuffCardViewModel> source)
+        {
+            if (source == null) return new List<BuffCardViewModel>();
+            try
+            {
+                string json = System.Text.Json.JsonSerializer.Serialize(source);
+                return System.Text.Json.JsonSerializer.Deserialize<List<BuffCardViewModel>>(json) ?? new List<BuffCardViewModel>();
+            }
+            catch
+            {
+                return new List<BuffCardViewModel>();
+            }
+        }
+
+        private List<PatrolGroupViewModel> ClonePatrolGroups(List<PatrolGroupViewModel> source)
+        {
+            if (source == null) return new List<PatrolGroupViewModel>();
+            try
+            {
+                string json = System.Text.Json.JsonSerializer.Serialize(source);
+                return System.Text.Json.JsonSerializer.Deserialize<List<PatrolGroupViewModel>>(json) ?? new List<PatrolGroupViewModel>();
+            }
+            catch
+            {
+                return new List<PatrolGroupViewModel>();
+            }
+        }
+
         private void BtnSavePreset_Click(object sender, RoutedEventArgs e)
         {
             string name = txtPresetName.Text.Trim();
@@ -1895,8 +1942,8 @@ namespace ArtaleProBuff
                 exp_crop_h = _cropH,
                 patrol_pause_others = false,
                 patrol_fluct = txtPatrolFluct.Text.Trim(),
-                cards = _cards.ToList(),
-                patrol_groups = _patrolGroups.ToList()
+                cards = CloneCards(_cards.ToList()),
+                patrol_groups = ClonePatrolGroups(_patrolGroups.ToList())
             };
             
             _config.presets[name] = preset;
@@ -1934,14 +1981,18 @@ namespace ArtaleProBuff
                 txtPatrolFluct.Text = preset.patrol_fluct;
                 
                 _cards.Clear();
-                foreach (var c in preset.cards) _cards.Add(c);
+                var clonedCards = CloneCards(preset.cards);
+                foreach (var c in clonedCards) _cards.Add(c);
                 
                 _patrolGroups.Clear();
-                foreach (var g in preset.patrol_groups)
+                var clonedGroups = ClonePatrolGroups(preset.patrol_groups);
+                foreach (var g in clonedGroups)
                 {
                     g.InitializeStepsFromLegacy();
                     _patrolGroups.Add(g);
                 }
+                
+                txtPresetName.Text = name; // Sync name textbox on load
                 
                 ToggleBgFields();
                 ToggleExpFields();
@@ -2046,17 +2097,21 @@ namespace ArtaleProBuff
                     txtPatrolFluct.Text = preset.patrol_fluct;
                     
                     _cards.Clear();
-                    foreach (var c in preset.cards) _cards.Add(c);
+                    var clonedCards = CloneCards(preset.cards);
+                    foreach (var c in clonedCards) _cards.Add(c);
                     
                     _patrolGroups.Clear();
-                    if (preset.patrol_groups != null)
+                    var clonedGroups = ClonePatrolGroups(preset.patrol_groups);
+                    if (clonedGroups != null)
                     {
-                        foreach (var g in preset.patrol_groups)
+                        foreach (var g in clonedGroups)
                         {
                             g.InitializeStepsFromLegacy();
                             _patrolGroups.Add(g);
                         }
                     }
+                    
+                    txtPresetName.Text = finalName; // Sync name textbox on import
                     
                     ToggleBgFields();
                     ToggleExpFields();
