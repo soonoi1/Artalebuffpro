@@ -2879,14 +2879,14 @@ namespace ArtaleProBuff
             ResetRecordButtons();
             _recordingPointIndex = index;
             
-            if (index == 1) btnRecordClick1.Content = "⏳ 请按F12锁定...";
-            else if (index == 2) btnRecordClick2.Content = "⏳ 请按F12锁定...";
-            else if (index == 3) btnRecordClick3.Content = "⏳ 请按F12锁定...";
+            if (index == 1) btnRecordClick1.Content = "⏳ 请按F8锁定...";
+            else if (index == 2) btnRecordClick2.Content = "⏳ 请按F8锁定...";
+            else if (index == 3) btnRecordClick3.Content = "⏳ 请按F8锁定...";
             
-            txtChannelMacroStatus.Text = $"请将鼠标移动到游戏内位置 {index}，然后按下 F12 键锁定坐标！";
+            txtChannelMacroStatus.Text = $"请将鼠标移动到游戏内位置 {index}，然后按下 F8 键锁定坐标！";
             
             UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
-            RegisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID, 0, 0x7B);
+            RegisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID, 0, 0x77);
         }
 
         private static void PostMouseClick(IntPtr hwnd, int x, int y)
