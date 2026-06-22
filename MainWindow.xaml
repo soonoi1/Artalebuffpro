@@ -43,6 +43,7 @@
                     <ui:NavigationViewItem Content="常规按键" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Keyboard24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="多组巡逻" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Navigation24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="配置预设" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Database24}" Click="NavigationViewItem_Click" />
+                    <ui:NavigationViewItem Content="找王辅助" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Target24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="全局与安全" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Settings24}" Click="NavigationViewItem_Click" />
                 </ui:NavigationView.MenuItems>
             </ui:NavigationView>
@@ -448,6 +449,74 @@
                                         </Grid>
                                     </ui:Card>
                                  </StackPanel>
+                            </ui:CardExpander>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Tab 5: Boss Hunting Helper -->
+                    <ScrollViewer x:Name="BossHuntingPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                        <StackPanel local:StackPanelHelper.Spacing="10">
+                            <!-- Card for Boss Hunt Settings -->
+                            <ui:CardExpander Header="👹 找王击杀计数器 (阿尔泰换线打满10只怪物提示)" Icon="{ui:SymbolIcon Target24}" IsExpanded="True">
+                                <StackPanel local:StackPanelHelper.Spacing="10" Margin="0,6,0,0">
+                                    <TextBlock Text="这个功能基于经验值变动进行统计，无需独立启动，只要下方的经验值监测开启，便会自动累加计数。" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" local:StackPanelHelper.Spacing="4">
+                                            <TextBlock Text="当前地图 / 目标王 (输入新名字或下拉选择):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <ComboBox x:Name="comboBossHuntMap" IsEditable="True" SelectionChanged="ComboBossHuntMap_SelectionChanged" Height="36" Padding="6,4,6,4"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="10,0,0,0" local:StackPanelHelper.Spacing="5">
+                                            <ui:Button Content="💾 保存" Click="BtnSaveBossHuntMap_Click" Height="36" Appearance="Primary" />
+                                            <ui:Button Content="❌ 删除" Click="BtnDeleteBossHuntMap_Click" Height="36" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,5,0" local:StackPanelHelper.Spacing="4">
+                                            <TextBlock Text="单只怪物经验值 (手输或自动捕捉):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <ui:TextBox x:Name="txtBossHuntMonsterExp" Text="" Padding="6,4,6,4" Height="36"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="5,0,0,0" local:StackPanelHelper.Spacing="4">
+                                            <TextBlock Text="最近检测单次经验变动:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ui:TextBox x:Name="txtBossHuntLastDiff" Text="等待变动..." IsReadOnly="True" Padding="6,4,6,4" Height="36" Background="{DynamicResource ControlAltFillColorTertiaryBrush}"/>
+                                                <ui:Button Grid.Column="1" Content="锁定" Click="BtnLockBossHuntExp_Click" Height="36" Margin="5,0,0,0" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Main Display Card for kills -->
+                                    <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Padding="15">
+                                        <StackPanel local:StackPanelHelper.Spacing="12" HorizontalAlignment="Center">
+                                            <TextBlock Text="已击杀小怪数量 (满10只触发提示)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                                            <TextBlock x:Name="txtBossHuntKills" Text="0 / 10" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                            <TextBlock x:Name="txtBossHuntStatus" Text="等待击杀统计..." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Controls -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:Button Grid.Column="0" Content="🔄 重置当前计数 (快捷键: F11)" Click="BtnResetBossHuntKills_Click" Height="40" FontSize="14" FontWeight="SemiBold" Appearance="Primary" HorizontalAlignment="Stretch" />
+                                        <TextBlock Grid.Column="1" Text="提示：换线后按 F11 即可在游戏内静默重置计数" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                    </Grid>
+                                </StackPanel>
                             </ui:CardExpander>
                         </StackPanel>
                     </ScrollViewer>

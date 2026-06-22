@@ -41,6 +41,7 @@ namespace ArtaleProBuff
         public bool patrol_pause_others { get; set; } = true;
         public string patrol_fluct { get; set; } = "10";
         public Dictionary<string, PresetData> presets { get; set; } = new Dictionary<string, PresetData>();
+        public Dictionary<string, double> boss_hunt_map_exp { get; set; } = new Dictionary<string, double>();
     }
 
     public static class ConfigHelper

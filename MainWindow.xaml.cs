@@ -35,6 +35,7 @@ namespace ArtaleProBuff
         
         private const int HOTKEY_START_ID = 9001;
         private const int HOTKEY_STOP_ID = 9002;
+        private const int HOTKEY_RESET_ID = 9003;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
@@ -465,6 +466,9 @@ namespace ArtaleProBuff
             listBuffCards.ItemsSource = _cards;
             listPatrolGroups.ItemsSource = _patrolGroups;
             
+            // Hook boss hunt map text changed
+            comboBossHuntMap.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent, new TextChangedEventHandler(ComboBossHuntMap_TextChanged));
+            
             // Load configuration
             LoadSettings();
             
@@ -483,6 +487,7 @@ namespace ArtaleProBuff
             
             RegisterHotKey(_hwnd, HOTKEY_START_ID, 0, 0x78); // F9
             RegisterHotKey(_hwnd, HOTKEY_STOP_ID, 0, 0x79);  // F10
+            RegisterHotKey(_hwnd, HOTKEY_RESET_ID, 0, 0x7A); // F11
         }
 
         protected override void OnClosed(EventArgs e)
@@ -493,6 +498,7 @@ namespace ArtaleProBuff
             {
                 UnregisterHotKey(_hwnd, HOTKEY_START_ID);
                 UnregisterHotKey(_hwnd, HOTKEY_STOP_ID);
+                UnregisterHotKey(_hwnd, HOTKEY_RESET_ID);
             }
             StopAll();
         }
@@ -510,6 +516,11 @@ namespace ArtaleProBuff
                 else if (id == HOTKEY_STOP_ID)
                 {
                     StopAll();
+                    handled = true;
+                }
+                else if (id == HOTKEY_RESET_ID)
+                {
+                    ResetBossHuntCount();
                     handled = true;
                 }
             }
@@ -614,6 +625,13 @@ namespace ArtaleProBuff
             {
                 comboPresets.SelectedIndex = 0;
             }
+            
+            // Initialize boss hunt map database
+            if (_config.boss_hunt_map_exp == null)
+            {
+                _config.boss_hunt_map_exp = new Dictionary<string, double>();
+            }
+            RefreshBossHuntMapsCombo("");
             
             ToggleBgFields();
             ToggleExpFields();
@@ -1496,6 +1514,15 @@ namespace ArtaleProBuff
                                 if (currentVal.Value != _lastParsedExp.Value && isDeltaValid)
                                 {
                                     changed = true;
+                                    double expDiff = currentVal.Value - _lastParsedExp.Value;
+                                    if (isPercent && expDiff < -80.0)
+                                    {
+                                        expDiff = (100.0 + currentVal.Value) - _lastParsedExp.Value;
+                                    }
+                                    if (expDiff > 0)
+                                    {
+                                        ProcessBossHuntOcrChange(expDiff, isPercent);
+                                    }
                                     _lastParsedExp = currentVal;
                                 }
                             }
@@ -1750,12 +1777,13 @@ namespace ArtaleProBuff
 
         private void SwitchTab(object? selectedItem)
         {
-            if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null) return;
+            if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null || BossHuntingPanel == null) return;
             
             KeysPanel.Visibility = Visibility.Collapsed;
             PatrolPanel.Visibility = Visibility.Collapsed;
             PresetsPanel.Visibility = Visibility.Collapsed;
             SettingsPanel.Visibility = Visibility.Collapsed;
+            BossHuntingPanel.Visibility = Visibility.Collapsed;
             
             // Stop preview loop when switching tabs
             StopPreviewLoop();
@@ -1774,6 +1802,10 @@ namespace ArtaleProBuff
                 else if (content.Contains("配置预设"))
                 {
                     PresetsPanel.Visibility = Visibility.Visible;
+                }
+                else if (content.Contains("找王辅助"))
+                {
+                    BossHuntingPanel.Visibility = Visibility.Visible;
                 }
                 else if (content.Contains("全局与安全"))
                 {
@@ -2286,6 +2318,183 @@ namespace ArtaleProBuff
             ReleaseDC(hwnd, clientDC);
             
             return bmp;
+        }
+
+        // ==========================================
+        // 找王辅助 (Boss Hunting Helper) Logic
+        // ==========================================
+        private int _bossHuntKills = 0;
+        private double _bossHuntLastDiff = 0;
+
+        private void ResetBossHuntCount()
+        {
+            UpdateUi(() =>
+            {
+                _bossHuntKills = 0;
+                txtBossHuntKills.Text = "0 / 10";
+                txtBossHuntKills.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
+                txtBossHuntStatus.Text = "等待击杀统计...";
+                txtBossHuntStatus.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
+                
+                try
+                {
+                    System.Media.SystemSounds.Asterisk.Play();
+                }
+                catch { }
+            });
+        }
+
+        private void BtnResetBossHuntKills_Click(object sender, RoutedEventArgs e)
+        {
+            ResetBossHuntCount();
+        }
+
+        private void BtnLockBossHuntExp_Click(object sender, RoutedEventArgs e)
+        {
+            if (_bossHuntLastDiff > 0)
+            {
+                bool isPercent = _initialExpIsPercent || _bossHuntLastDiff < 1.0;
+                txtBossHuntMonsterExp.Text = isPercent ? $"{_bossHuntLastDiff:F4}" : $"{_bossHuntLastDiff:F1}";
+                
+                // Save immediately
+                string mapName = comboBossHuntMap.Text.Trim();
+                if (!string.IsNullOrEmpty(mapName))
+                {
+                    _config.boss_hunt_map_exp[mapName] = _bossHuntLastDiff;
+                    ConfigHelper.Save(_config);
+                    RefreshBossHuntMapsCombo(mapName);
+                }
+            }
+        }
+
+        private void BtnSaveBossHuntMap_Click(object sender, RoutedEventArgs e)
+        {
+            string mapName = comboBossHuntMap.Text.Trim();
+            if (string.IsNullOrEmpty(mapName))
+            {
+                System.Windows.MessageBox.Show(this, "请输入或选择地图名称！", "参数错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (double.TryParse(txtBossHuntMonsterExp.Text, out double exp) && exp > 0)
+            {
+                _config.boss_hunt_map_exp[mapName] = exp;
+                ConfigHelper.Save(_config);
+                RefreshBossHuntMapsCombo(mapName);
+                System.Windows.MessageBox.Show(this, $"地图 '{mapName}' 单只怪物经验值 {exp} 已保存！", "保存成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                System.Windows.MessageBox.Show(this, "请输入有效的怪物经验值！", "输入错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void BtnDeleteBossHuntMap_Click(object sender, RoutedEventArgs e)
+        {
+            string mapName = comboBossHuntMap.Text.Trim();
+            if (string.IsNullOrEmpty(mapName)) return;
+            
+            if (_config.boss_hunt_map_exp.ContainsKey(mapName))
+            {
+                var result = System.Windows.MessageBox.Show(this, $"确定要删除地图 '{mapName}' 的记录吗？", "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result == MessageBoxResult.Yes)
+                {
+                    _config.boss_hunt_map_exp.Remove(mapName);
+                    ConfigHelper.Save(_config);
+                    RefreshBossHuntMapsCombo("");
+                    txtBossHuntMonsterExp.Text = "";
+                }
+            }
+        }
+
+        private void ComboBossHuntMap_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (comboBossHuntMap.SelectedItem != null)
+            {
+                string mapName = comboBossHuntMap.SelectedItem.ToString();
+                if (_config.boss_hunt_map_exp.TryGetValue(mapName, out double exp))
+                {
+                    bool isPercent = _initialExpIsPercent || exp < 1.0;
+                    txtBossHuntMonsterExp.Text = isPercent ? $"{exp:F4}" : $"{exp:F1}";
+                }
+            }
+        }
+
+        private void ComboBossHuntMap_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string mapName = comboBossHuntMap.Text.Trim();
+            if (string.IsNullOrEmpty(mapName)) return;
+            
+            if (_config.boss_hunt_map_exp.TryGetValue(mapName, out double exp))
+            {
+                bool isPercent = _initialExpIsPercent || exp < 1.0;
+                txtBossHuntMonsterExp.Text = isPercent ? $"{exp:F4}" : $"{exp:F1}";
+            }
+        }
+
+        private void RefreshBossHuntMapsCombo(string selectedMap)
+        {
+            if (_config.boss_hunt_map_exp != null)
+            {
+                comboBossHuntMap.ItemsSource = _config.boss_hunt_map_exp.Keys.ToList();
+                if (!string.IsNullOrEmpty(selectedMap))
+                {
+                    comboBossHuntMap.Text = selectedMap;
+                }
+            }
+        }
+
+        private void ProcessBossHuntOcrChange(double expDiff, bool isPercent)
+        {
+            UpdateUi(() =>
+            {
+                _bossHuntLastDiff = expDiff;
+                txtBossHuntLastDiff.Text = isPercent ? $"{expDiff:F4}%" : $"{expDiff:F1}";
+
+                string expText = txtBossHuntMonsterExp.Text.Trim();
+                double mobExp = 0;
+                
+                if (string.IsNullOrEmpty(expText) || !double.TryParse(expText, out mobExp) || mobExp <= 0)
+                {
+                    mobExp = expDiff;
+                    txtBossHuntMonsterExp.Text = isPercent ? $"{mobExp:F4}" : $"{mobExp:F1}";
+                    
+                    string mapName = comboBossHuntMap.Text.Trim();
+                    if (!string.IsNullOrEmpty(mapName))
+                    {
+                        _config.boss_hunt_map_exp[mapName] = mobExp;
+                        ConfigHelper.Save(_config);
+                        RefreshBossHuntMapsCombo(mapName);
+                    }
+                }
+
+                if (mobExp > 0)
+                {
+                    int killsThisTime = (int)Math.Round(expDiff / mobExp);
+                    if (killsThisTime < 1) killsThisTime = 1;
+                    
+                    _bossHuntKills += killsThisTime;
+                    txtBossHuntKills.Text = $"{_bossHuntKills} / 10";
+                    
+                    if (_bossHuntKills >= 10)
+                    {
+                        txtBossHuntKills.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+                        txtBossHuntStatus.Text = "已满 10 只小怪！可以换线或观察王痕。";
+                        txtBossHuntStatus.Foreground = System.Windows.Media.Brushes.MediumSeaGreen;
+                        
+                        try
+                        {
+                            System.Media.SystemSounds.Exclamation.Play();
+                        }
+                        catch { }
+                    }
+                    else
+                    {
+                        txtBossHuntKills.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
+                        txtBossHuntStatus.Text = $"已击杀 {_bossHuntKills} 只，还需 {10 - _bossHuntKills} 只。";
+                        txtBossHuntStatus.ClearValue(System.Windows.Controls.TextBlock.ForegroundProperty);
+                    }
+                }
+            });
         }
     }
 
