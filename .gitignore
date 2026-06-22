@@ -21,6 +21,7 @@ license.lic
 *.tmp
 *.log
 *.pdb
+*.old
 
 # PyInstaller files (except source script if needed)
 # *.spec

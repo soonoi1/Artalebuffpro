@@ -99,16 +99,21 @@ namespace ArtaleProBuff
                     double.TryParse(LeftTimeText, out l);
                     double.TryParse(MidPauseTimeText, out m);
 
-                    if (r > 0) Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = RightTimeText });
-                    if (m > 0) Steps.Add(new PatrolStepViewModel { Direction = "停留", DurationText = MidPauseTimeText });
-                    if (l > 0) Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = LeftTimeText });
+                    if (r > 0)
+                    {
+                        Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = RightTimeText, PauseAfterText = MidPauseTimeText });
+                    }
+                    if (l > 0)
+                    {
+                        Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = LeftTimeText, PauseAfterText = "0.0" });
+                    }
                 }
 
                 // If still empty (e.g. new group or empty config), add default steps
                 if (Steps.Count == 0)
                 {
-                    Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = "2.0" });
-                    Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = "2.0" });
+                    Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = "2.0", PauseAfterText = "0.0" });
+                    Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = "2.0", PauseAfterText = "0.0" });
                 }
             }
         }

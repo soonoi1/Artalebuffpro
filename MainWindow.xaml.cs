@@ -1103,45 +1103,52 @@ namespace ArtaleProBuff
                 double.TryParse(step.DurationText, out duration);
                 double actualDuration = applyFluct(duration);
 
-                if (actualDuration <= 0) continue;
+                double pauseAfter = 0;
+                double.TryParse(step.PauseAfterText, out pauseAfter);
+                double actualPauseAfter = applyFluct(pauseAfter);
 
                 string dir = step.Direction;
-                if (dir == "右")
+                if (actualDuration > 0)
                 {
-                    UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向右 {actualDuration:F1}秒";
-                    _isPatrolMoving = true;
-                    PressKeySafe("right");
-                    try
+                    if (dir == "右")
                     {
-                        await PatrolDelayAsync("right", actualDuration, token, allowInterrupt);
+                        UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                        g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向右 {actualDuration:F1}秒";
+                        _isPatrolMoving = true;
+                        PressKeySafe("right");
+                        try
+                        {
+                            await PatrolDelayAsync("right", actualDuration, token, allowInterrupt);
+                        }
+                        finally
+                        {
+                            ReleaseKeySafe("right");
+                            _isPatrolMoving = false;
+                        }
                     }
-                    finally
+                    else if (dir == "左")
                     {
-                        ReleaseKeySafe("right");
-                        _isPatrolMoving = false;
+                        UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                        g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向左 {actualDuration:F1}秒";
+                        _isPatrolMoving = true;
+                        PressKeySafe("left");
+                        try
+                        {
+                            await PatrolDelayAsync("left", actualDuration, token, allowInterrupt);
+                        }
+                        finally
+                        {
+                            ReleaseKeySafe("left");
+                            _isPatrolMoving = false;
+                        }
                     }
                 }
-                else if (dir == "左")
+
+                if (actualPauseAfter > 0)
                 {
-                    UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向左 {actualDuration:F1}秒";
-                    _isPatrolMoving = true;
-                    PressKeySafe("left");
-                    try
-                    {
-                        await PatrolDelayAsync("left", actualDuration, token, allowInterrupt);
-                    }
-                    finally
-                    {
-                        ReleaseKeySafe("left");
-                        _isPatrolMoving = false;
-                    }
-                }
-                else // "停留"
-                {
-                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 暂停 {actualDuration:F1}秒";
-                    await PatrolDelayAsync(null, actualDuration, token, allowInterrupt);
+                    token.ThrowIfCancellationRequested();
+                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 停留 {actualPauseAfter:F1}秒";
+                    await PatrolDelayAsync(null, actualPauseAfter, token, allowInterrupt);
                 }
 
                 stepIndex++;
