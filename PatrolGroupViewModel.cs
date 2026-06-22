@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 namespace ArtaleProBuff
@@ -18,6 +19,7 @@ namespace ArtaleProBuff
         // Runtime UI state
         private string _status = "等待运行";
         private DateTime _nextRunTime = DateTime.MinValue;
+        private ObservableCollection<PatrolStepViewModel> _steps = new ObservableCollection<PatrolStepViewModel>();
 
         public bool IsActive
         {
@@ -72,6 +74,43 @@ namespace ArtaleProBuff
         {
             get => _nextRunTime;
             set => _nextRunTime = value;
+        }
+
+        public ObservableCollection<PatrolStepViewModel> Steps
+        {
+            get => _steps;
+            set => SetField(ref _steps, value);
+        }
+
+        public void InitializeStepsFromLegacy()
+        {
+            if (Steps == null)
+            {
+                Steps = new ObservableCollection<PatrolStepViewModel>();
+            }
+
+            if (Steps.Count == 0)
+            {
+                bool hasLegacy = !string.IsNullOrEmpty(RightTimeText) || !string.IsNullOrEmpty(LeftTimeText) || !string.IsNullOrEmpty(MidPauseTimeText);
+                if (hasLegacy)
+                {
+                    double r = 0, l = 0, m = 0;
+                    double.TryParse(RightTimeText, out r);
+                    double.TryParse(LeftTimeText, out l);
+                    double.TryParse(MidPauseTimeText, out m);
+
+                    if (r > 0) Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = RightTimeText });
+                    if (m > 0) Steps.Add(new PatrolStepViewModel { Direction = "停留", DurationText = MidPauseTimeText });
+                    if (l > 0) Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = LeftTimeText });
+                }
+
+                // If still empty (e.g. new group or empty config), add default steps
+                if (Steps.Count == 0)
+                {
+                    Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = "2.0" });
+                    Steps.Add(new PatrolStepViewModel { Direction = "左", DurationText = "2.0" });
+                }
+            }
         }
 
         [JsonIgnore]

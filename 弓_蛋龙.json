@@ -6,6 +6,10 @@
     "exp_enabled": true,
     "exp_close_game": false,
     "exp_time": "15",
+    "exp_crop_x": 0,
+    "exp_crop_y": 0,
+    "exp_crop_w": 0,
+    "exp_crop_h": 0,
     "cards": [
       {
         "Key": "a",
@@ -41,14 +45,20 @@
         "RightTimeText": "0.1",
         "LeftTimeText": "0.1",
         "MidPauseTimeText": "2",
-        "IntervalAfterText": "2"
+        "IntervalAfterText": "2",
+        "IsTimedLoop": false,
+        "LoopIntervalText": "30",
+        "LoopCountText": "1"
       },
       {
         "IsActive": true,
         "RightTimeText": "0.3",
         "LeftTimeText": "0.1",
         "MidPauseTimeText": "0.0",
-        "IntervalAfterText": "2"
+        "IntervalAfterText": "2",
+        "IsTimedLoop": false,
+        "LoopIntervalText": "30",
+        "LoopCountText": "1"
       }
     ],
     "patrol_pause_others": false,

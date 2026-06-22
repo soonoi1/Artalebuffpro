@@ -567,6 +567,7 @@ namespace ArtaleProBuff
             {
                 foreach (var g in _config.patrol_groups)
                 {
+                    g.InitializeStepsFromLegacy();
                     _patrolGroups.Add(g);
                 }
             }
@@ -577,7 +578,9 @@ namespace ArtaleProBuff
             }
             if (_patrolGroups.Count == 0)
             {
-                _patrolGroups.Add(new PatrolGroupViewModel { RightTimeText = "2.0", LeftTimeText = "2.0", MidPauseTimeText = "0.0", IntervalAfterText = "5.0" });
+                var newGroup = new PatrolGroupViewModel { RightTimeText = "2.0", LeftTimeText = "2.0", MidPauseTimeText = "0.0", IntervalAfterText = "5.0" };
+                newGroup.InitializeStepsFromLegacy();
+                _patrolGroups.Add(newGroup);
             }
             
             // Themes loading
@@ -1071,15 +1074,6 @@ namespace ArtaleProBuff
         {
             Random rand = new Random();
 
-            double rightTime = 0;
-            double.TryParse(g.RightTimeText, out rightTime);
-            double leftTime = 0;
-            double.TryParse(g.LeftTimeText, out leftTime);
-            double midPause = 0;
-            double.TryParse(g.MidPauseTimeText, out midPause);
-            double interval = 0;
-            double.TryParse(g.IntervalAfterText, out interval);
-
             double fluctPercent = 0;
             string fluctText = "";
             UpdateUi(() => fluctText = txtPatrolFluct.Text);
@@ -1094,55 +1088,68 @@ namespace ArtaleProBuff
                 return finalVal < 0.01 ? 0.01 : finalVal;
             };
 
-            double actualRightTime = applyFluct(rightTime);
-            double actualLeftTime = applyFluct(leftTime);
-            double actualMidPause = applyFluct(midPause);
+            var stepsSnapshot = g.Steps.ToList();
+            int stepIndex = 1;
+            foreach (var step in stepsSnapshot)
+            {
+                token.ThrowIfCancellationRequested();
+                while (_isGloballyPaused && !token.IsCancellationRequested)
+                {
+                    await Task.Delay(200, token);
+                }
+                token.ThrowIfCancellationRequested();
+
+                double duration = 0;
+                double.TryParse(step.DurationText, out duration);
+                double actualDuration = applyFluct(duration);
+
+                if (actualDuration <= 0) continue;
+
+                string dir = step.Direction;
+                if (dir == "右")
+                {
+                    UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向右 {actualDuration:F1}秒";
+                    _isPatrolMoving = true;
+                    PressKeySafe("right");
+                    try
+                    {
+                        await PatrolDelayAsync("right", actualDuration, token, allowInterrupt);
+                    }
+                    finally
+                    {
+                        ReleaseKeySafe("right");
+                        _isPatrolMoving = false;
+                    }
+                }
+                else if (dir == "左")
+                {
+                    UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
+                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 向左 {actualDuration:F1}秒";
+                    _isPatrolMoving = true;
+                    PressKeySafe("left");
+                    try
+                    {
+                        await PatrolDelayAsync("left", actualDuration, token, allowInterrupt);
+                    }
+                    finally
+                    {
+                        ReleaseKeySafe("left");
+                        _isPatrolMoving = false;
+                    }
+                }
+                else // "停留"
+                {
+                    g.Status = $"({stepIndex}/{stepsSnapshot.Count}) 暂停 {actualDuration:F1}秒";
+                    await PatrolDelayAsync(null, actualDuration, token, allowInterrupt);
+                }
+
+                stepIndex++;
+            }
+
+            double interval = 0;
+            double.TryParse(g.IntervalAfterText, out interval);
             double actualInterval = applyFluct(interval);
-
-            // 1. Move Right
-            if (actualRightTime > 0)
-            {
-                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                g.Status = $"向右 {actualRightTime:F1}秒";
-                _isPatrolMoving = true;
-                PressKeySafe("right");
-                try
-                {
-                    await PatrolDelayAsync("right", actualRightTime, token, allowInterrupt);
-                }
-                finally
-                {
-                    ReleaseKeySafe("right");
-                    _isPatrolMoving = false;
-                }
-            }
-
-            // 2. Mid Pause
-            if (actualMidPause > 0)
-            {
-                g.Status = $"暂停 {actualMidPause:F1}秒";
-                await PatrolDelayAsync(null, actualMidPause, token, allowInterrupt);
-            }
-
-            // 3. Move Left
-            if (actualLeftTime > 0)
-            {
-                UpdateUi(() => txtPatrolStatus.Text = "巡逻中");
-                g.Status = $"向左 {actualLeftTime:F1}秒";
-                _isPatrolMoving = true;
-                PressKeySafe("left");
-                try
-                {
-                    await PatrolDelayAsync("left", actualLeftTime, token, allowInterrupt);
-                }
-                finally
-                {
-                    ReleaseKeySafe("left");
-                    _isPatrolMoving = false;
-                }
-            }
-
-            // 4. Group Interval
             if (actualInterval > 0)
             {
                 g.Status = $"组后停留 {actualInterval:F1}秒";
@@ -1761,7 +1768,9 @@ namespace ArtaleProBuff
 
         private void BtnAddPatrolGroup_Click(object sender, RoutedEventArgs e)
         {
-            _patrolGroups.Add(new PatrolGroupViewModel { RightTimeText = "2.0", LeftTimeText = "2.0", MidPauseTimeText = "0.0", IntervalAfterText = "5.0" });
+            var newGroup = new PatrolGroupViewModel { RightTimeText = "2.0", LeftTimeText = "2.0", MidPauseTimeText = "0.0", IntervalAfterText = "5.0" };
+            newGroup.InitializeStepsFromLegacy();
+            _patrolGroups.Add(newGroup);
         }
 
         private void BtnDeletePatrolGroup_Click(object sender, RoutedEventArgs e)
@@ -1769,6 +1778,29 @@ namespace ArtaleProBuff
             if (sender is FrameworkElement fe && fe.DataContext is PatrolGroupViewModel group)
             {
                 _patrolGroups.Remove(group);
+            }
+        }
+
+        private void BtnAddPatrolStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is PatrolGroupViewModel group)
+            {
+                group.Steps.Add(new PatrolStepViewModel { Direction = "右", DurationText = "2.0" });
+            }
+        }
+
+        private void BtnDeletePatrolStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is PatrolStepViewModel step)
+            {
+                foreach (var group in _patrolGroups)
+                {
+                    if (group.Steps.Contains(step))
+                    {
+                        group.Steps.Remove(step);
+                        break;
+                    }
+                }
             }
         }
 
@@ -1850,7 +1882,11 @@ namespace ArtaleProBuff
                 foreach (var c in preset.cards) _cards.Add(c);
                 
                 _patrolGroups.Clear();
-                foreach (var g in preset.patrol_groups) _patrolGroups.Add(g);
+                foreach (var g in preset.patrol_groups)
+                {
+                    g.InitializeStepsFromLegacy();
+                    _patrolGroups.Add(g);
+                }
                 
                 ToggleBgFields();
                 ToggleExpFields();
@@ -1961,7 +1997,11 @@ namespace ArtaleProBuff
                     _patrolGroups.Clear();
                     if (preset.patrol_groups != null)
                     {
-                        foreach (var g in preset.patrol_groups) _patrolGroups.Add(g);
+                        foreach (var g in preset.patrol_groups)
+                        {
+                            g.InitializeStepsFromLegacy();
+                            _patrolGroups.Add(g);
+                        }
                     }
                     
                     ToggleBgFields();

@@ -213,26 +213,36 @@
 
                                                 <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,2,0,4"/>
 
-                                                <!-- Durations -->
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0" Margin="2">
-                                                        <TextBlock Text="向右时长 (秒)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding RightTimeText, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" Margin="2">
-                                                        <TextBlock Text="中途停留 (秒)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding MidPauseTimeText, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="2" Margin="2">
-                                                        <TextBlock Text="向左时长 (秒)" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
-                                                        <ui:TextBox Text="{Binding LeftTimeText, Mode=TwoWay}" HorizontalContentAlignment="Center"/>
-                                                    </StackPanel>
-                                                </Grid>
+                                                <!-- Steps List -->
+                                                <StackPanel local:StackPanelHelper.Spacing="4">
+                                                    <TextBlock Text="巡逻动作序列 (按顺序执行):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                    <ItemsControl ItemsSource="{Binding Steps}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,2,0,2">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    
+                                                                    <ComboBox Grid.Column="0" SelectedValue="{Binding Direction, Mode=TwoWay}" SelectedValuePath="Tag" Width="90" Height="28" Padding="6,2,6,2" VerticalAlignment="Center">
+                                                                        <ComboBoxItem Content="向右走" Tag="右" />
+                                                                        <ComboBoxItem Content="向左走" Tag="左" />
+                                                                        <ComboBoxItem Content="停顿" Tag="停留" />
+                                                                    </ComboBox>
+                                                                    
+                                                                    <TextBlock Grid.Column="1" Text="时长 (秒):" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                    <ui:TextBox Grid.Column="2" Text="{Binding DurationText, Mode=TwoWay}" Width="60" Height="28" HorizontalContentAlignment="Center" VerticalAlignment="Center" />
+                                                                    
+                                                                    <ui:Button Grid.Column="3" Content="删除" Click="BtnDeletePatrolStep_Click" Margin="6,0,0,0" Padding="8,2,8,2" Height="28" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <ui:Button Content="+ 添加动作" Click="BtnAddPatrolStep_Click" HorizontalAlignment="Left" Margin="0,2,0,4" Padding="8,3,8,3" FontSize="11" Height="26" />
+                                                </StackPanel>
 
                                                 <!-- Interval and Status -->
                                                 <Grid Margin="0,4,0,0">
