@@ -443,6 +443,9 @@ namespace ArtaleProBuff
         private int _cropH = 0;
         private double? _lastParsedExp = null;
         private double? _initialExpValue = null;
+        private double _accumulatedExpGained = 0;
+        private bool _initialExpIsPercent = false;
+        private DateTime _lastCalibrationTime = DateTime.MinValue;
         private readonly List<(DateTime Time, double Value)> _expHistory = new List<(DateTime Time, double Value)>();
         
         private IntPtr _hwnd = IntPtr.Zero;
@@ -1288,6 +1291,9 @@ namespace ArtaleProBuff
             txtExpStatus.Text = "启动中...";
             _lastParsedExp = null;
             _initialExpValue = null;
+            _accumulatedExpGained = 0;
+            _initialExpIsPercent = false;
+            _lastCalibrationTime = DateTime.Now;
             _expHistory.Clear();
             
             UpdateUi(() => {
@@ -1348,14 +1354,62 @@ namespace ArtaleProBuff
                         if (currentVal.HasValue)
                         {
                             var now = DateTime.Now;
+                            bool isPercent = ocrText.Contains("%");
+
                             if (!_initialExpValue.HasValue)
                             {
                                 _initialExpValue = currentVal.Value;
+                                _initialExpIsPercent = isPercent;
+                                _lastCalibrationTime = now;
                             }
-                            double totalGained = currentVal.Value - _initialExpValue.Value;
-                            if (totalGained < 0) totalGained = 0;
 
-                            _expHistory.Add((now, currentVal.Value));
+                            // Calculate delta relative to baseline
+                            double delta = 0;
+                            bool isDeltaValid = false;
+                            if (_initialExpIsPercent == isPercent)
+                            {
+                                delta = currentVal.Value - _initialExpValue.Value;
+                                if (isPercent)
+                                {
+                                    if (delta < -80.0) // Level up wrap-around
+                                    {
+                                        delta = (100.0 + currentVal.Value) - _initialExpValue.Value;
+                                    }
+                                    if (delta >= -0.5 && delta <= 5.0)
+                                    {
+                                        isDeltaValid = true;
+                                    }
+                                }
+                                else
+                                {
+                                    if (delta >= -10000 && delta <= 10000000)
+                                    {
+                                        isDeltaValid = true;
+                                    }
+                                }
+                            }
+
+                            // Every 30 seconds, calibrate baseline
+                            if ((now - _lastCalibrationTime).TotalSeconds >= 30)
+                            {
+                                if (isDeltaValid)
+                                {
+                                    _accumulatedExpGained += (delta < 0 ? 0 : delta);
+                                }
+                                _initialExpValue = currentVal.Value;
+                                _initialExpIsPercent = isPercent;
+                                _lastCalibrationTime = now;
+                                delta = 0;
+                                isDeltaValid = true;
+                            }
+
+                            double displayDelta = (isDeltaValid && delta > 0) ? delta : 0;
+                            double totalGained = _accumulatedExpGained + displayDelta;
+
+                            if (isDeltaValid)
+                            {
+                                _expHistory.Add((now, currentVal.Value));
+                            }
                             _expHistory.RemoveAll(x => (now - x.Time).TotalMinutes > 11);
 
                             // Calculate growth rates
@@ -1402,9 +1456,9 @@ namespace ArtaleProBuff
                             }
 
                             // Update growth rate display on UI
-                            bool isPercent = ocrText.Contains("%");
+                            bool isPercentDisplay = isPercent;
                             UpdateUi(() => {
-                                if (isPercent)
+                                if (isPercentDisplay)
                                 {
                                     txtExpRateMin.Text = $"+{rateMin:F4}%";
                                     txtExpRate10Min.Text = $"+{rate10Min:F4}%";
@@ -1420,7 +1474,7 @@ namespace ArtaleProBuff
 
                             if (_lastParsedExp.HasValue)
                             {
-                                if (currentVal.Value != _lastParsedExp.Value)
+                                if (currentVal.Value != _lastParsedExp.Value && isDeltaValid)
                                 {
                                     changed = true;
                                     _lastParsedExp = currentVal;
@@ -1512,21 +1566,12 @@ namespace ArtaleProBuff
             if (string.IsNullOrWhiteSpace(text) || text.Contains("__ERROR_")) return null;
             string sanitized = SanitizeOcrText(text);
             
-            // Look for percentage first, e.g. "99.82%" or "12.3%"
-            var percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+[\.,]\d+)\s*%");
+            // Look for percentage, allowing optional spaces around dot/comma and before %
+            var percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+(?:\s*[\.,]\s*\d+)?)\s*%");
             if (percentMatch.Success)
             {
-                if (double.TryParse(percentMatch.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
-                {
-                    return val;
-                }
-            }
-            
-            // If no percentage match, look for integer percentages like "90%"
-            percentMatch = System.Text.RegularExpressions.Regex.Match(sanitized, @"(\d+)\s*%");
-            if (percentMatch.Success)
-            {
-                if (double.TryParse(percentMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
+                string cleanVal = System.Text.RegularExpressions.Regex.Replace(percentMatch.Groups[1].Value, @"\s+", "").Replace(',', '.');
+                if (double.TryParse(cleanVal, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val))
                 {
                     return val;
                 }
@@ -2108,6 +2153,23 @@ namespace ArtaleProBuff
                     System.Windows.MessageBox.Show(this, "划选区域过小，请重新选择！", "选择范围太小", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
+        }
+
+        private void BtnResetExp_Click(object sender, RoutedEventArgs e)
+        {
+            _initialExpValue = null;
+            _accumulatedExpGained = 0;
+            _initialExpIsPercent = false;
+            _lastCalibrationTime = DateTime.Now;
+            _expHistory.Clear();
+            _lastParsedExp = null;
+
+            UpdateUi(() => {
+                txtExpRateMin.Text = "0.00%";
+                txtExpRate10Min.Text = "0.00%";
+                txtExpTotalGained.Text = "0.00%";
+                txtExpOcrText.Text = "已重置，等待下一次识别...";
+            });
         }
 
         private static BitmapSource? CaptureWindowClientArea(IntPtr hwnd)

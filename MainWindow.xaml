@@ -385,12 +385,14 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="超时判定时间阈值 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
                                                 <ui:TextBox x:Name="txtExpTimeout" Text="15" MinWidth="100" HorizontalAlignment="Left" Padding="4,4,4,4" />
                                             </StackPanel>
-                                            <ui:Button Grid.Column="1" Content="选择经验值监控区域" Icon="{ui:SymbolIcon Crop24}" Click="BtnSelectExpRegion_Click" VerticalAlignment="Bottom" Appearance="Primary" />
+                                            <ui:Button Grid.Column="1" Content="选择经验值监控区域" Icon="{ui:SymbolIcon Crop24}" Click="BtnSelectExpRegion_Click" VerticalAlignment="Bottom" Margin="10,0,0,0" Appearance="Primary" />
+                                            <ui:Button Grid.Column="2" Content="重置数据" Icon="{ui:SymbolIcon Refresh24}" Click="BtnResetExp_Click" VerticalAlignment="Bottom" Margin="10,0,0,0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
                                         </Grid>
 
                                         <!-- Real-time monitoring area -->

@@ -6,14 +6,14 @@
   "exp_enabled": true,
   "exp_close_game": false,
   "exp_time": "15",
-  "exp_crop_x": 0,
-  "exp_crop_y": 0,
-  "exp_crop_w": 0,
-  "exp_crop_h": 0,
+  "exp_crop_x": 904,
+  "exp_crop_y": 852,
+  "exp_crop_w": 159,
+  "exp_crop_h": 27,
   "cards": [
     {
       "Key": "c",
-      "IntervalText": "0.5",
+      "IntervalText": "0.1",
       "FluctuationText": "50",
       "IsActive": true,
       "IsLongPress": false,
@@ -21,10 +21,10 @@
       "IsExclusive": false
     },
     {
-      "Key": "f1",
+      "Key": "7",
       "IntervalText": "200",
       "FluctuationText": "10",
-      "IsActive": false,
+      "IsActive": true,
       "IsLongPress": false,
       "HoldTimeText": "5.0",
       "IsExclusive": true
@@ -33,10 +33,28 @@
       "Key": "z",
       "IntervalText": "10",
       "FluctuationText": "50",
-      "IsActive": false,
+      "IsActive": true,
       "IsLongPress": false,
       "HoldTimeText": "5.0",
       "IsExclusive": true
+    },
+    {
+      "Key": "alt",
+      "IntervalText": "175",
+      "FluctuationText": "10",
+      "IsActive": true,
+      "IsLongPress": false,
+      "HoldTimeText": "5.0",
+      "IsExclusive": true
+    },
+    {
+      "Key": "4",
+      "IntervalText": "600",
+      "FluctuationText": "4",
+      "IsActive": true,
+      "IsLongPress": false,
+      "HoldTimeText": "5.0",
+      "IsExclusive": false
     }
   ],
   "patrol_groups": [
@@ -45,19 +63,19 @@
       "RightTimeText": "0.5",
       "LeftTimeText": "0.1",
       "MidPauseTimeText": "0",
-      "IntervalAfterText": "0",
+      "IntervalAfterText": "20",
       "IsTimedLoop": false,
       "LoopIntervalText": "30",
       "LoopCountText": "1",
       "Steps": [
         {
-          "Direction": "\u8D70\u53F3",
+          "Direction": "\u53F3",
           "DurationText": "0.5",
           "PauseAfterText": "0"
         },
         {
           "Direction": "\u5DE6",
-          "DurationText": "0.1",
+          "DurationText": "0.01",
           "PauseAfterText": "0.0"
         }
       ],
@@ -68,24 +86,24 @@
       "RightTimeText": "2",
       "LeftTimeText": "2",
       "MidPauseTimeText": "0.0",
-      "IntervalAfterText": "",
+      "IntervalAfterText": "1",
       "IsTimedLoop": true,
-      "LoopIntervalText": "10",
+      "LoopIntervalText": "30",
       "LoopCountText": "1",
       "Steps": [
         {
           "Direction": "\u5DE6",
-          "DurationText": "2",
-          "PauseAfterText": "0.0"
-        },
-        {
-          "Direction": "\u8D70\u53F3",
-          "DurationText": "4",
+          "DurationText": "2.5",
           "PauseAfterText": "0.0"
         },
         {
           "Direction": "\u53F3",
-          "DurationText": "0.1",
+          "DurationText": "3",
+          "PauseAfterText": "0.0"
+        },
+        {
+          "Direction": "\u5DE6",
+          "DurationText": "0.01",
           "PauseAfterText": "0.0"
         }
       ],
@@ -178,18 +196,18 @@
       "cards": [
         {
           "Key": "c",
-          "IntervalText": "0.01",
+          "IntervalText": "0.1",
           "FluctuationText": "50",
           "IsActive": true,
-          "IsLongPress": true,
+          "IsLongPress": false,
           "HoldTimeText": "0.01",
           "IsExclusive": false
         },
         {
-          "Key": "f1",
+          "Key": "7",
           "IntervalText": "200",
           "FluctuationText": "10",
-          "IsActive": false,
+          "IsActive": true,
           "IsLongPress": false,
           "HoldTimeText": "5.0",
           "IsExclusive": true
@@ -202,6 +220,15 @@
           "IsLongPress": false,
           "HoldTimeText": "5.0",
           "IsExclusive": true
+        },
+        {
+          "Key": "alt",
+          "IntervalText": "175",
+          "FluctuationText": "10",
+          "IsActive": true,
+          "IsLongPress": false,
+          "HoldTimeText": "5.0",
+          "IsExclusive": true
         }
       ],
       "patrol_groups": [
@@ -210,11 +237,22 @@
           "RightTimeText": "0.5",
           "LeftTimeText": "0.1",
           "MidPauseTimeText": "0",
-          "IntervalAfterText": "5",
+          "IntervalAfterText": "20",
           "IsTimedLoop": false,
           "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u53F3",
+              "DurationText": "0.5",
+              "PauseAfterText": "0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         },
         {
@@ -222,23 +260,27 @@
           "RightTimeText": "2",
           "LeftTimeText": "2",
           "MidPauseTimeText": "0.0",
-          "IntervalAfterText": "2",
+          "IntervalAfterText": "1",
           "IsTimedLoop": true,
-          "LoopIntervalText": "10",
+          "LoopIntervalText": "30",
           "LoopCountText": "1",
-          "Steps": [],
-          "PauseOthersDuringMove": true
-        },
-        {
-          "IsActive": true,
-          "RightTimeText": "2.0",
-          "LeftTimeText": "0.1",
-          "MidPauseTimeText": "0.0",
-          "IntervalAfterText": "0.1",
-          "IsTimedLoop": true,
-          "LoopIntervalText": "15",
-          "LoopCountText": "1",
-          "Steps": [],
+          "Steps": [
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "2.5",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u53F3",
+              "DurationText": "3",
+              "PauseAfterText": "0.0"
+            },
+            {
+              "Direction": "\u5DE6",
+              "DurationText": "0.01",
+              "PauseAfterText": "0.0"
+            }
+          ],
           "PauseOthersDuringMove": true
         }
       ],
