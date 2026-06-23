@@ -862,7 +862,9 @@
   "boss_hunt_map_exp": {},
   "boss_hunt_map_exps": {
     "\u84DD\u8611\u83C7": [
-      320
+      320,
+      39600,
+      15
     ]
   },
   "channel_macro_enabled": true,

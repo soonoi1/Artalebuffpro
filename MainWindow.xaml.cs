@@ -1064,6 +1064,15 @@ namespace ArtaleProBuff
                         while (elapsed < totalMs)
                         {
                             token.ThrowIfCancellationRequested();
+
+                            // 如果启用了移动时暂停其他技能按键，且当前正在巡逻移动中，则暂停倒计时
+                            if (_isPatrolMoving && _shouldPauseOthersDuringPatrol)
+                            {
+                                card.Status = "巡逻中 (倒计时暂停)...";
+                                await Task.Delay(100, token);
+                                continue;
+                            }
+
                             int delayMs = (int)Math.Min(step, totalMs - elapsed);
                             if (delayMs <= 0) break;
                             await Task.Delay(delayMs, token);
@@ -1098,6 +1107,7 @@ namespace ArtaleProBuff
         {
             double elapsed = 0;
             double step = 0.05; // 50ms resolution
+            int repeatCounter = 0;
 
             while (elapsed < durationSec)
             {
@@ -1128,6 +1138,18 @@ namespace ArtaleProBuff
                     if (heldKey != null)
                     {
                         PressKeySafe(heldKey);
+                        repeatCounter = 0; // 重置按键连打计数
+                    }
+                }
+
+                // 每隔 200ms (4 * 50ms) 重新向游戏发送一次当前行进按键，防止因技能动画、怪物受击僵直等打断后角色原地停止
+                if (heldKey != null)
+                {
+                    repeatCounter++;
+                    if (repeatCounter >= 4)
+                    {
+                        PressKeySafe(heldKey);
+                        repeatCounter = 0;
                     }
                 }
 
