@@ -865,15 +865,35 @@
       320
     ]
   },
-  "channel_macro_enabled": false,
-  "channel_macro_alt": true,
+  "channel_macro_enabled": true,
+  "channel_macro_alt": false,
   "channel_macro_ctrl": false,
-  "channel_macro_shift": false,
-  "channel_macro_key": "F12",
+  "channel_macro_shift": true,
+  "channel_macro_key": "F1",
   "channel_click1_x": 965,
   "channel_click1_y": 105,
   "channel_click2_x": 285,
   "channel_click2_y": 540,
   "channel_click3_x": 435,
-  "channel_click3_y": 405
+  "channel_click3_y": 405,
+  "channel_click_steps": [
+    {
+      "Name": "1. \u6253\u5F00\u83DC\u5355",
+      "X": 2004,
+      "Y": 72,
+      "DelaySeconds": 0.5
+    },
+    {
+      "Name": "2. \u70B9\u51FB\u6362\u7EBF",
+      "X": 606,
+      "Y": 882,
+      "DelaySeconds": 0.5
+    },
+    {
+      "Name": "3. \u786E\u8BA4\u6362\u7EBF",
+      "X": 908,
+      "Y": 693,
+      "DelaySeconds": 0.5
+    }
+  ]
 }

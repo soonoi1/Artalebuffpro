@@ -78,6 +78,21 @@ namespace ArtaleProBuff
         private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
 
         [DllImport("user32.dll")]
+        private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+
+        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+
+        [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
@@ -2805,17 +2820,6 @@ namespace ArtaleProBuff
             return 0;
         }
 
-        private static void PostMouseClick(IntPtr hwnd, int x, int y)
-        {
-            if (hwnd == IntPtr.Zero) return;
-            IntPtr lParam = (IntPtr)((y << 16) | (x & 0xFFFF));
-            IntPtr wParam = (IntPtr)1;
-            
-            PostMessageToAll(hwnd, 0x0201, wParam, lParam);
-            Thread.Sleep(50);
-            PostMessageToAll(hwnd, 0x0202, IntPtr.Zero, lParam);
-        }
-
         private async Task RunChannelChangeMacroAsync()
         {
             IntPtr hwnd = GetTargetHwnd();
@@ -2840,12 +2844,37 @@ namespace ArtaleProBuff
             {
                 var step = steps[i];
                 UpdateUi(() => txtChannelMacroStatus.Text = $"正在换线 (步骤 {i + 1}/{steps.Count}: {step.Name})...");
-                PostMouseClick(hwnd, step.X, step.Y);
-                
-                int delayMs = (int)(step.DelaySeconds * 1000);
-                if (delayMs > 0)
+
+                // 1. 保存当前鼠标指针位置
+                POINT originalPos;
+                bool gotPos = GetCursorPos(out originalPos);
+
+                // 2. 激活并带到前台
+                SetForegroundWindow(hwnd);
+                await Task.Delay(100); // 稍微延迟一下确保窗口已激活并准备好接收输入
+
+                // 3. 将相对游戏窗口客户区的坐标转换为屏幕坐标
+                POINT pt = new POINT { X = step.X, Y = step.Y };
+                ClientToScreen(hwnd, ref pt);
+
+                // 4. 移动光标并执行点击
+                SetCursorPos(pt.X, pt.Y);
+                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                await Task.Delay(50);
+                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+
+                // 5. 立即将鼠标指针还原，尽量避免干扰用户的手部操作
+                if (gotPos)
                 {
-                    await Task.Delay(delayMs);
+                    SetCursorPos(originalPos.X, originalPos.Y);
+                }
+
+                // 6. 等待该步骤设定的延迟（扣除已消耗的激活 100ms 和点击 50ms，以保持延迟周期精准）
+                int delayMs = (int)(step.DelaySeconds * 1000);
+                int remainingDelay = delayMs - 150;
+                if (remainingDelay > 0)
+                {
+                    await Task.Delay(remainingDelay);
                 }
             }
 
