@@ -23,6 +23,38 @@ namespace ArtaleProBuff
         public string patrol_fluct { get; set; }
     }
 
+    public class ChannelClickStep : ViewModelBase
+    {
+        private string _name = "步骤";
+        private int _x = 0;
+        private int _y = 0;
+        private double _delaySeconds = 0.5;
+
+        public string Name
+        {
+            get => _name;
+            set => SetField(ref _name, value);
+        }
+
+        public int X
+        {
+            get => _x;
+            set => SetField(ref _x, value);
+        }
+
+        public int Y
+        {
+            get => _y;
+            set => SetField(ref _y, value);
+        }
+
+        public double DelaySeconds
+        {
+            get => _delaySeconds;
+            set => SetField(ref _delaySeconds, value);
+        }
+    }
+
     public class AppConfig
     {
         public string global_delay { get; set; } = "0";
@@ -54,6 +86,7 @@ namespace ArtaleProBuff
         public int channel_click2_y { get; set; } = 540;
         public int channel_click3_x { get; set; } = 435;
         public int channel_click3_y { get; set; } = 405;
+        public List<ChannelClickStep> channel_click_steps { get; set; } = new List<ChannelClickStep>();
     }
 
     public static class ConfigHelper

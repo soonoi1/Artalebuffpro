@@ -37,8 +37,7 @@ namespace ArtaleProBuff
         private const int HOTKEY_STOP_ID = 9002;
         private const int HOTKEY_RESET_ID = 9003;
         private const int HOTKEY_CHANNEL_MACRO_ID = 9004;
-        private const int HOTKEY_CALIBRATE_ID = 2000;
-        private int _recordingPointIndex = 0;
+
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
@@ -435,6 +434,7 @@ namespace ArtaleProBuff
         private AppConfig _config = new AppConfig();
         private ObservableCollection<BuffCardViewModel> _cards = new ObservableCollection<BuffCardViewModel>();
         private ObservableCollection<PatrolGroupViewModel> _patrolGroups = new ObservableCollection<PatrolGroupViewModel>();
+        private ObservableCollection<ChannelClickStep> _channelClickSteps = new ObservableCollection<ChannelClickStep>();
         
         private bool _isRunningGlobal = false;
         private BuffCardViewModel _exclusiveCard = null;
@@ -522,7 +522,6 @@ namespace ArtaleProBuff
                 UnregisterHotKey(_hwnd, HOTKEY_STOP_ID);
                 UnregisterHotKey(_hwnd, HOTKEY_RESET_ID);
                 UnregisterHotKey(_hwnd, HOTKEY_CHANNEL_MACRO_ID);
-                UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
             }
             StopAll();
         }
@@ -550,11 +549,6 @@ namespace ArtaleProBuff
                 else if (id == HOTKEY_CHANNEL_MACRO_ID)
                 {
                     Task.Run(async () => await RunChannelChangeMacroAsync());
-                    handled = true;
-                }
-                else if (id == HOTKEY_CALIBRATE_ID)
-                {
-                    HandleCalibrateHotkey();
                     handled = true;
                 }
             }
@@ -695,12 +689,24 @@ namespace ArtaleProBuff
             comboChannelMacroKey.ItemsSource = new List<string> { "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" };
             comboChannelMacroKey.SelectedItem = _config.channel_macro_key ?? "F12";
 
-            txtClick1X.Text = _config.channel_click1_x.ToString();
-            txtClick1Y.Text = _config.channel_click1_y.ToString();
-            txtClick2X.Text = _config.channel_click2_x.ToString();
-            txtClick2Y.Text = _config.channel_click2_y.ToString();
-            txtClick3X.Text = _config.channel_click3_x.ToString();
-            txtClick3Y.Text = _config.channel_click3_y.ToString();
+            // Initialize channel click steps
+            if (_config.channel_click_steps == null || _config.channel_click_steps.Count == 0)
+            {
+                _config.channel_click_steps = new List<ChannelClickStep>
+                {
+                    new ChannelClickStep { Name = "1. 打开菜单", X = _config.channel_click1_x, Y = _config.channel_click1_y, DelaySeconds = 0.5 },
+                    new ChannelClickStep { Name = "2. 点击换线", X = _config.channel_click2_x, Y = _config.channel_click2_y, DelaySeconds = 0.5 },
+                    new ChannelClickStep { Name = "3. 确认换线", X = _config.channel_click3_x, Y = _config.channel_click3_y, DelaySeconds = 0.5 }
+                };
+                ConfigHelper.Save(_config);
+            }
+
+            _channelClickSteps.Clear();
+            foreach (var step in _config.channel_click_steps)
+            {
+                _channelClickSteps.Add(step);
+            }
+            listChannelClickSteps.ItemsSource = _channelClickSteps;
 
             RefreshBossHuntMapsCombo("");
             
@@ -2799,96 +2805,6 @@ namespace ArtaleProBuff
             return 0;
         }
 
-        private void HandleCalibrateHotkey()
-        {
-            if (_recordingPointIndex <= 0) return;
-            
-            UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
-            
-            POINT p;
-            if (GetCursorPos(out p))
-            {
-                IntPtr targetHwnd = GetTargetHwnd();
-                if (targetHwnd != IntPtr.Zero)
-                {
-                    ScreenToClient(targetHwnd, ref p);
-                    
-                    int idx = _recordingPointIndex;
-                    _recordingPointIndex = 0;
-                    
-                    UpdateUi(() =>
-                    {
-                        if (idx == 1)
-                        {
-                            _config.channel_click1_x = p.X;
-                            _config.channel_click1_y = p.Y;
-                            txtClick1X.Text = p.X.ToString();
-                            txtClick1Y.Text = p.Y.ToString();
-                            btnRecordClick1.Content = "🎯 录制位置 1";
-                        }
-                        else if (idx == 2)
-                        {
-                            _config.channel_click2_x = p.X;
-                            _config.channel_click2_y = p.Y;
-                            txtClick2X.Text = p.X.ToString();
-                            txtClick2Y.Text = p.Y.ToString();
-                            btnRecordClick2.Content = "🎯 录制位置 2";
-                        }
-                        else if (idx == 3)
-                        {
-                            _config.channel_click3_x = p.X;
-                            _config.channel_click3_y = p.Y;
-                            txtClick3X.Text = p.X.ToString();
-                            txtClick3Y.Text = p.Y.ToString();
-                            btnRecordClick3.Content = "🎯 录制位置 3";
-                        }
-                        
-                        ConfigHelper.Save(_config);
-                        txtChannelMacroStatus.Text = $"位置 {idx} 录制成功: ({p.X}, {p.Y})";
-                    });
-                }
-                else
-                {
-                    UpdateUi(() =>
-                    {
-                        txtChannelMacroStatus.Text = "录制失败: 未找到游戏窗口";
-                        ResetRecordButtons();
-                    });
-                }
-            }
-            else
-            {
-                UpdateUi(() =>
-                {
-                    txtChannelMacroStatus.Text = "录制失败: 无法获取鼠标坐标";
-                    ResetRecordButtons();
-                });
-            }
-        }
-
-        private void ResetRecordButtons()
-        {
-            _recordingPointIndex = 0;
-            btnRecordClick1.Content = "🎯 录制位置 1";
-            btnRecordClick2.Content = "🎯 录制位置 2";
-            btnRecordClick3.Content = "🎯 录制位置 3";
-        }
-
-        private void StartRecordingPoint(int index)
-        {
-            ResetRecordButtons();
-            _recordingPointIndex = index;
-            
-            if (index == 1) btnRecordClick1.Content = "⏳ 请按F8锁定...";
-            else if (index == 2) btnRecordClick2.Content = "⏳ 请按F8锁定...";
-            else if (index == 3) btnRecordClick3.Content = "⏳ 请按F8锁定...";
-            
-            txtChannelMacroStatus.Text = $"请将鼠标移动到游戏内位置 {index}，然后按下 F8 键锁定坐标！";
-            
-            UnregisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID);
-            RegisterHotKey(_hwnd, HOTKEY_CALIBRATE_ID, 0, 0x77);
-        }
-
         private static void PostMouseClick(IntPtr hwnd, int x, int y)
         {
             if (hwnd == IntPtr.Zero) return;
@@ -2909,20 +2825,29 @@ namespace ArtaleProBuff
                 return;
             }
 
-            // Also reset/refresh the boss hunt kills count when starting channel change macro
+            // Reset/refresh the boss hunt kills count when starting channel change macro
             ResetBossHuntCount();
 
-            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 1/3)...");
-            PostMouseClick(hwnd, _config.channel_click1_x, _config.channel_click1_y);
-            await Task.Delay(500);
+            // Run click steps sequentially
+            var steps = _channelClickSteps.ToList();
+            if (steps.Count == 0)
+            {
+                UpdateUi(() => txtChannelMacroStatus.Text = "警告: 换线点击序列为空，请先添加步骤！");
+                return;
+            }
 
-            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 2/3)...");
-            PostMouseClick(hwnd, _config.channel_click2_x, _config.channel_click2_y);
-            await Task.Delay(500);
-
-            UpdateUi(() => txtChannelMacroStatus.Text = "正在换线 (点击 3/3)...");
-            PostMouseClick(hwnd, _config.channel_click3_x, _config.channel_click3_y);
-            await Task.Delay(500);
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                UpdateUi(() => txtChannelMacroStatus.Text = $"正在换线 (步骤 {i + 1}/{steps.Count}: {step.Name})...");
+                PostMouseClick(hwnd, step.X, step.Y);
+                
+                int delayMs = (int)(step.DelaySeconds * 1000);
+                if (delayMs > 0)
+                {
+                    await Task.Delay(delayMs);
+                }
+            }
 
             UpdateUi(() => txtChannelMacroStatus.Text = "换线宏执行完毕，计数器已清空重置");
         }
@@ -2949,31 +2874,90 @@ namespace ArtaleProBuff
             RegisterChannelMacroHotkey();
         }
 
-        private void ChannelMacroCoords_Changed(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private void ChannelStepField_Changed(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (_config == null || _channelClickSteps == null) return;
+            
+            // Sync current collection to config
+            _config.channel_click_steps = _channelClickSteps.ToList();
+            try
+            {
+                ConfigHelper.Save(_config);
+            }
+            catch { }
+        }
+
+        private void BtnAddStep_Click(object sender, RoutedEventArgs e)
         {
             if (_config == null) return;
-            if (int.TryParse(txtClick1X.Text, out int c1x)) _config.channel_click1_x = c1x;
-            if (int.TryParse(txtClick1Y.Text, out int c1y)) _config.channel_click1_y = c1y;
-            if (int.TryParse(txtClick2X.Text, out int c2x)) _config.channel_click2_x = c2x;
-            if (int.TryParse(txtClick2Y.Text, out int c2y)) _config.channel_click2_y = c2y;
-            if (int.TryParse(txtClick3X.Text, out int c3x)) _config.channel_click3_x = c3x;
-            if (int.TryParse(txtClick3Y.Text, out int c3y)) _config.channel_click3_y = c3y;
+            
+            var newStep = new ChannelClickStep 
+            { 
+                Name = $"步骤 {_channelClickSteps.Count + 1}", 
+                X = 0, 
+                Y = 0, 
+                DelaySeconds = 0.5 
+            };
+            _channelClickSteps.Add(newStep);
+            
+            _config.channel_click_steps = _channelClickSteps.ToList();
             ConfigHelper.Save(_config);
+            txtChannelMacroStatus.Text = "已添加新点击步骤";
         }
 
-        private void BtnRecordClick1_Click(object sender, RoutedEventArgs e)
+        private void BtnDeleteStep_Click(object sender, RoutedEventArgs e)
         {
-            StartRecordingPoint(1);
+            if (_config == null) return;
+            
+            var button = sender as System.Windows.Controls.Button;
+            if (button == null) return;
+            
+            var step = button.DataContext as ChannelClickStep;
+            if (step == null) return;
+            
+            _channelClickSteps.Remove(step);
+            _config.channel_click_steps = _channelClickSteps.ToList();
+            ConfigHelper.Save(_config);
+            txtChannelMacroStatus.Text = "已删除点击步骤";
         }
 
-        private void BtnRecordClick2_Click(object sender, RoutedEventArgs e)
+        private void BtnRecordStepPoint_Click(object sender, RoutedEventArgs e)
         {
-            StartRecordingPoint(2);
-        }
+            if (_config == null) return;
+            
+            var button = sender as System.Windows.Controls.Button;
+            if (button == null) return;
+            
+            var step = button.DataContext as ChannelClickStep;
+            if (step == null) return;
 
-        private void BtnRecordClick3_Click(object sender, RoutedEventArgs e)
-        {
-            StartRecordingPoint(3);
+            IntPtr hwnd = GetTargetHwnd();
+            if (hwnd == IntPtr.Zero)
+            {
+                System.Windows.MessageBox.Show(this, "请先在上方常规设置中指定正确的游戏窗口！", "未找到指定窗口", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var screenshot = CaptureWindowClientArea(hwnd);
+            if (screenshot == null)
+            {
+                System.Windows.MessageBox.Show(this, "截取游戏窗口画面失败，请确保游戏未最小化！", "截图失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var selectWin = new PointSelectionWindow(screenshot);
+            selectWin.Owner = this;
+            selectWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            if (selectWin.ShowDialog() == true)
+            {
+                var point = selectWin.SelectedPoint;
+                step.X = (int)point.X;
+                step.Y = (int)point.Y;
+                
+                _config.channel_click_steps = _channelClickSteps.ToList();
+                ConfigHelper.Save(_config);
+                txtChannelMacroStatus.Text = $"步骤 '{step.Name}' 录制成功: ({step.X}, {step.Y})";
+            }
         }
 
         private void BtnTestChannelMacro_Click(object sender, RoutedEventArgs e)
@@ -3092,6 +3076,56 @@ namespace ArtaleProBuff
             };
             
             // Allow escape to cancel selection
+            KeyDown += (s, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.Escape)
+                {
+                    DialogResult = false;
+                    Close();
+                }
+            };
+        }
+    }
+
+    public class PointSelectionWindow : Window
+    {
+        private Canvas _canvas;
+        public Point SelectedPoint { get; private set; }
+
+        public PointSelectionWindow(BitmapSource screenshot)
+        {
+            WindowStyle = WindowStyle.None;
+            AllowsTransparency = true;
+            Background = Brushes.Transparent;
+            Cursor = System.Windows.Input.Cursors.Cross;
+            
+            var image = new System.Windows.Controls.Image
+            {
+                Source = screenshot,
+                Stretch = Stretch.None
+            };
+            
+            _canvas = new Canvas
+            {
+                Background = Brushes.Transparent
+            };
+            
+            var grid = new Grid();
+            grid.Children.Add(image);
+            grid.Children.Add(_canvas);
+            
+            Content = grid;
+            
+            Width = screenshot.PixelWidth;
+            Height = screenshot.PixelHeight;
+            
+            _canvas.MouseLeftButtonUp += (s, e) =>
+            {
+                SelectedPoint = e.GetPosition(_canvas);
+                DialogResult = true;
+                Close();
+            };
+            
             KeyDown += (s, e) =>
             {
                 if (e.Key == System.Windows.Input.Key.Escape)

@@ -859,7 +859,21 @@
       "patrol_fluct": "10"
     }
   },
-  "boss_hunt_map_exp": {
-    "\u84DD\u8611\u83C7": 320
-  }
+  "boss_hunt_map_exp": {},
+  "boss_hunt_map_exps": {
+    "\u84DD\u8611\u83C7": [
+      320
+    ]
+  },
+  "channel_macro_enabled": false,
+  "channel_macro_alt": true,
+  "channel_macro_ctrl": false,
+  "channel_macro_shift": false,
+  "channel_macro_key": "F12",
+  "channel_click1_x": 965,
+  "channel_click1_y": 105,
+  "channel_click2_x": 285,
+  "channel_click2_y": 540,
+  "channel_click3_x": 435,
+  "channel_click3_y": 405
 }

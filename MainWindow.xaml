@@ -607,47 +607,53 @@
                                     <Separator Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,5" />
 
                                     <!-- Click Points Calibration -->
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <!-- Point 1 -->
-                                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8" local:StackPanelHelper.Spacing="10">
-                                            <TextBlock Text="点击位置 1 (设置图标):" Width="140" VerticalAlignment="Center"/>
-                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick1X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick1Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                        </StackPanel>
-                                        <ui:Button x:Name="btnRecordClick1" Grid.Row="0" Grid.Column="1" Content="🎯 录制位置 1" Click="BtnRecordClick1_Click" Width="120" Height="32" Margin="0,0,0,8"/>
+                                    <StackPanel local:StackPanelHelper.Spacing="6">
+                                        <Grid>
+                                            <TextBlock Text="点击序列设置 (依次从上到下执行):" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <ui:Button Content="➕ 添加点击步骤" Click="BtnAddStep_Click" HorizontalAlignment="Right" Appearance="Primary" Height="30" Padding="8,2,8,2"/>
+                                        </Grid>
 
-                                        <!-- Point 2 -->
-                                        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,8" local:StackPanelHelper.Spacing="10">
-                                            <TextBlock Text="点击位置 2 (换线图标):" Width="140" VerticalAlignment="Center"/>
-                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick2X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick2Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                        </StackPanel>
-                                        <ui:Button x:Name="btnRecordClick2" Grid.Row="1" Grid.Column="1" Content="🎯 录制位置 2" Click="BtnRecordClick2_Click" Width="120" Height="32" Margin="0,0,0,8"/>
+                                        <ItemsControl x:Name="listChannelClickSteps">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <ui:Card Margin="0,0,0,6" Padding="8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <!-- Step Name -->
+                                                            <ui:TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="步骤描述" Margin="2" VerticalAlignment="Center" TextChanged="ChannelStepField_Changed"/>
+                                                            
+                                                            <!-- Coordinates -->
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center" local:StackPanelHelper.Spacing="4">
+                                                                <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                                                <ui:TextBox Text="{Binding X, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" TextChanged="ChannelStepField_Changed" Padding="4,2,4,2"/>
+                                                                <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                                                <ui:TextBox Text="{Binding Y, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" TextChanged="ChannelStepField_Changed" Padding="4,2,4,2"/>
+                                                            </StackPanel>
 
-                                        <!-- Point 3 -->
-                                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" local:StackPanelHelper.Spacing="10">
-                                            <TextBlock Text="点击位置 3 (确定按钮):" Width="140" VerticalAlignment="Center"/>
-                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick3X" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
-                                            <ui:TextBox x:Name="txtClick3Y" Width="60" TextChanged="ChannelMacroCoords_Changed" Height="32"/>
-                                        </StackPanel>
-                                        <ui:Button x:Name="btnRecordClick3" Grid.Row="2" Grid.Column="1" Content="🎯 录制位置 3" Click="BtnRecordClick3_Click" Width="120" Height="32"/>
-                                    </Grid>
+                                                            <!-- Delay -->
+                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="5,0,10,0" VerticalAlignment="Center" local:StackPanelHelper.Spacing="4">
+                                                                <TextBlock Text="延时(秒):" VerticalAlignment="Center"/>
+                                                                <ui:TextBox Text="{Binding DelaySeconds, Mode=TwoWay}" Width="55" HorizontalContentAlignment="Center" TextChanged="ChannelStepField_Changed" Padding="4,2,4,2"/>
+                                                            </StackPanel>
+
+                                                            <!-- Record button -->
+                                                            <ui:Button Grid.Column="3" Content="🎯 截图录制" Click="BtnRecordStepPoint_Click" Margin="5,0,5,0" Height="30" Width="85" Padding="4,2,4,2" Appearance="Secondary"/>
+
+                                                            <!-- Delete button -->
+                                                            <ui:Button Grid.Column="4" Content="×" Click="BtnDeleteStep_Click" Margin="5,0,0,0" Height="30" Width="30" Padding="0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontWeight="Bold" FontSize="14"/>
+                                                        </Grid>
+                                                    </ui:Card>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
 
                                     <!-- Status & Test -->
                                     <Grid Margin="0,5,0,0">
