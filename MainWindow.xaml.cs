@@ -2829,6 +2829,10 @@ namespace ArtaleProBuff
                 return;
             }
 
+            // 保存整个宏运行前鼠标指针的位置，在最终宏结束后一次性还原
+            POINT originalPos;
+            bool gotPos = GetCursorPos(out originalPos);
+
             // Reset/refresh the boss hunt kills count when starting channel change macro
             ResetBossHuntCount();
 
@@ -2840,42 +2844,43 @@ namespace ArtaleProBuff
                 return;
             }
 
+            // 1. 激活并带到前台
+            SetForegroundWindow(hwnd);
+            await Task.Delay(250); // 给游戏窗口足够的时间获得焦点和前台状态
+
             for (int i = 0; i < steps.Count; i++)
             {
                 var step = steps[i];
-                UpdateUi(() => txtChannelMacroStatus.Text = $"正在换线 (步骤 {i + 1}/{steps.Count}: {step.Name})...");
 
-                // 1. 保存当前鼠标指针位置
-                POINT originalPos;
-                bool gotPos = GetCursorPos(out originalPos);
-
-                // 2. 激活并带到前台
-                SetForegroundWindow(hwnd);
-                await Task.Delay(100); // 稍微延迟一下确保窗口已激活并准备好接收输入
-
-                // 3. 将相对游戏窗口客户区的坐标转换为屏幕坐标
+                // 2. 将相对游戏窗口客户区的坐标转换为屏幕坐标
                 POINT pt = new POINT { X = step.X, Y = step.Y };
                 ClientToScreen(hwnd, ref pt);
 
-                // 4. 移动光标并执行点击
+                UpdateUi(() => txtChannelMacroStatus.Text = $"步骤 {i + 1}/{steps.Count} '{step.Name}': 相对坐标({step.X}, {step.Y}) -> 屏幕坐标({pt.X}, {pt.Y})...");
+
+                // 3. 移动光标到目标物理位置
                 SetCursorPos(pt.X, pt.Y);
+                // 必须在移动坐标后延迟 100ms，等待游戏引擎接收并更新该帧下的指针焦点，否则直接点击会偏在原地或无效
+                await Task.Delay(100);
+
+                // 4. 执行鼠标左键物理点击
                 mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
                 await Task.Delay(50);
                 mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
 
-                // 5. 立即将鼠标指针还原，尽量避免干扰用户的手部操作
-                if (gotPos)
-                {
-                    SetCursorPos(originalPos.X, originalPos.Y);
-                }
-
-                // 6. 等待该步骤设定的延迟（扣除已消耗的激活 100ms 和点击 50ms，以保持延迟周期精准）
+                // 5. 等待该步骤设定的延迟（扣除已消耗的移动/等待 100ms 和按键按住 50ms）
                 int delayMs = (int)(step.DelaySeconds * 1000);
                 int remainingDelay = delayMs - 150;
                 if (remainingDelay > 0)
                 {
                     await Task.Delay(remainingDelay);
                 }
+            }
+
+            // 6. 整个宏执行完毕后，将鼠标指针一键恢复还原，不打扰用户使用
+            if (gotPos)
+            {
+                SetCursorPos(originalPos.X, originalPos.Y);
             }
 
             UpdateUi(() => txtChannelMacroStatus.Text = "换线宏执行完毕，计数器已清空重置");
