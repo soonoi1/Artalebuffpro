@@ -21,6 +21,13 @@ namespace ArtaleProBuff
         public List<PatrolGroupViewModel> patrol_groups { get; set; }
         public bool patrol_pause_others { get; set; }
         public string patrol_fluct { get; set; }
+        public bool rune_enabled { get; set; }
+        public string rune_keywords { get; set; }
+        public string rune_interval { get; set; }
+        public bool rune_stop_all { get; set; }
+        public bool rune_close_game { get; set; }
+        public bool rune_run_click_sequence { get; set; }
+        public List<ChannelClickStep> rune_click_steps { get; set; }
     }
 
     public class ChannelClickStep : ViewModelBase
@@ -87,6 +94,13 @@ namespace ArtaleProBuff
         public int channel_click3_x { get; set; } = 435;
         public int channel_click3_y { get; set; } = 405;
         public List<ChannelClickStep> channel_click_steps { get; set; } = new List<ChannelClickStep>();
+        public bool rune_enabled { get; set; } = false;
+        public string rune_keywords { get; set; } = "解放符文,解除诅咒,解除詛咒,未解除符文";
+        public string rune_interval { get; set; } = "2.0";
+        public bool rune_stop_all { get; set; } = true;
+        public bool rune_close_game { get; set; } = false;
+        public bool rune_run_click_sequence { get; set; } = false;
+        public List<ChannelClickStep> rune_click_steps { get; set; } = new List<ChannelClickStep>();
     }
 
     public static class ConfigHelper

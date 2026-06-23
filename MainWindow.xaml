@@ -44,6 +44,7 @@
                     <ui:NavigationViewItem Content="多组巡逻" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Navigation24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="配置预设" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Database24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="找王辅助" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Target24}" Click="NavigationViewItem_Click" />
+                    <ui:NavigationViewItem Content="符文检测" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Warning24}" Click="NavigationViewItem_Click" />
                     <ui:NavigationViewItem Content="全局与安全" TargetPageType="{x:Null}" Icon="{ui:SymbolIcon Settings24}" Click="NavigationViewItem_Click" />
                 </ui:NavigationView.MenuItems>
             </ui:NavigationView>
@@ -666,6 +667,122 @@
                                     </Grid>
                                 </StackPanel>
                             </ui:CardExpander>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Tab 6: Rune Detection -->
+                    <ScrollViewer x:Name="RunePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                        <StackPanel local:StackPanelHelper.Spacing="10">
+                            <!-- Card for Rune Detection Settings -->
+                            <ui:CardExpander Header="🛡️ 符文诅咒智能检测与处理" Icon="{ui:SymbolIcon Warning24}" IsExpanded="True">
+                                <StackPanel local:StackPanelHelper.Spacing="10" Margin="0,6,0,0">
+                                    <TextBlock Text="此功能会截取游戏全屏并进行文字识别，一旦检测到代表诅咒的关键字，将立即触发您配置的操作（如关闭游戏、停止运行挂机或执行指定的点击动作），保障您的账号安全。" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                                    <ui:ToggleSwitch x:Name="switchRuneDetection" Content="启用符文检测功能" Checked="SwitchRuneDetection_Changed" Unchecked="SwitchRuneDetection_Changed" />
+
+                                    <StackPanel x:Name="panelRuneFields" local:StackPanelHelper.Spacing="10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Margin="0,0,5,0" local:StackPanelHelper.Spacing="4">
+                                                <TextBlock Text="检测关键字 (英文逗号分隔):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                <ui:TextBox x:Name="txtRuneKeywords" Text="解放符文,解除诅咒,解除詛咒,未解除符文" Height="36" Padding="6,4,6,4" TextChanged="RuneConfigField_Changed"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Margin="5,0,0,0" local:StackPanelHelper.Spacing="4">
+                                                <TextBlock Text="检测循环间隔 (秒):" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                <ui:TextBox x:Name="txtRuneInterval" Text="2.0" Height="36" Padding="6,4,6,4" TextChanged="RuneConfigField_Changed"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Separator Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,5" />
+                                        <TextBlock Text="⚠️ 检测到符文后的执行选项 (可勾选多项组合):" FontWeight="SemiBold"/>
+
+                                        <StackPanel local:StackPanelHelper.Spacing="6">
+                                            <CheckBox x:Name="chkRuneStopAll" Content="立即停止挂机运行 (停止按键/巡逻/监测)" Checked="RuneConfigField_Changed" Unchecked="RuneConfigField_Changed"/>
+                                            <CheckBox x:Name="chkRuneCloseGame" Content="立即物理强退关闭游戏窗口" Checked="RuneConfigField_Changed" Unchecked="RuneConfigField_Changed"/>
+                                            <CheckBox x:Name="chkRuneRunClickSequence" Content="立即执行以下点击序列 (例如点击进入自由市场、换线等)" Checked="RuneConfigField_Changed" Unchecked="RuneConfigField_Changed"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ui:CardExpander>
+
+                            <!-- 点击序列设置 Card -->
+                            <ui:CardExpander Header="🎯 符文处理点击序列设置" Icon="{ui:SymbolIcon Target24}" IsExpanded="True" x:Name="expRuneClicks">
+                                <StackPanel local:StackPanelHelper.Spacing="10" Margin="0,6,0,0">
+                                    <Grid>
+                                        <TextBlock Text="点击序列步骤 (依次从上到下执行):" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        <ui:Button Content="➕ 添加点击步骤" Click="BtnAddRuneStep_Click" HorizontalAlignment="Right" Appearance="Primary" Height="30" Padding="8,2,8,2"/>
+                                    </Grid>
+
+                                    <ItemsControl x:Name="listRuneClickSteps">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <ui:Card Margin="0,0,0,6" Padding="8">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- Step Name -->
+                                                        <ui:TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="步骤描述" Margin="2" VerticalAlignment="Center" TextChanged="RuneStepField_Changed"/>
+
+                                                        <!-- Coordinates -->
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center" local:StackPanelHelper.Spacing="4">
+                                                            <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                                            <ui:TextBox Text="{Binding X, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" TextChanged="RuneStepField_Changed" Padding="4,2,4,2"/>
+                                                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                                            <ui:TextBox Text="{Binding Y, Mode=TwoWay}" Width="50" HorizontalContentAlignment="Center" TextChanged="RuneStepField_Changed" Padding="4,2,4,2"/>
+                                                        </StackPanel>
+
+                                                        <!-- Delay -->
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="5,0,10,0" VerticalAlignment="Center" local:StackPanelHelper.Spacing="4">
+                                                            <TextBlock Text="延时(秒):" VerticalAlignment="Center"/>
+                                                            <ui:TextBox Text="{Binding DelaySeconds, Mode=TwoWay}" Width="55" HorizontalContentAlignment="Center" TextChanged="RuneStepField_Changed" Padding="4,2,4,2"/>
+                                                        </StackPanel>
+
+                                                        <!-- Record button -->
+                                                        <ui:Button Grid.Column="3" Content="🎯 截图录制" Click="BtnRecordRuneStepPoint_Click" Margin="5,0,5,0" Height="30" Width="85" Padding="4,2,4,2" Appearance="Secondary"/>
+
+                                                        <!-- Delete button -->
+                                                        <ui:Button Grid.Column="4" Content="×" Click="BtnDeleteRuneStep_Click" Margin="5,0,0,0" Height="30" Width="30" Padding="0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontWeight="Bold" FontSize="14"/>
+                                                    </Grid>
+                                                </ui:Card>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Status & Test -->
+                                    <Grid Margin="0,5,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="txtRuneMacroStatus" Text="状态: 空闲" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <ui:Button Grid.Column="1" Content="▶ 立即测试点击动作" Click="BtnTestRuneMacro_Click" Width="140" Height="36" Appearance="Secondary"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:CardExpander>
+
+                            <!-- 实时状态 Card -->
+                            <ui:Card Padding="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Symbol="HeartPulse24" FontSize="20" Foreground="{DynamicResource SystemAccentColorBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="当前检测状态:" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock x:Name="txtRuneStatus" Text="未启动" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </ui:Card>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

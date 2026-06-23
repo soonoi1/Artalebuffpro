@@ -450,8 +450,11 @@ namespace ArtaleProBuff
         private ObservableCollection<BuffCardViewModel> _cards = new ObservableCollection<BuffCardViewModel>();
         private ObservableCollection<PatrolGroupViewModel> _patrolGroups = new ObservableCollection<PatrolGroupViewModel>();
         private ObservableCollection<ChannelClickStep> _channelClickSteps = new ObservableCollection<ChannelClickStep>();
+        private ObservableCollection<ChannelClickStep> _runeClickSteps = new ObservableCollection<ChannelClickStep>();
         
         private bool _isRunningGlobal = false;
+        private bool _isRuneDetectionRunning = false;
+        private CancellationTokenSource _runeDetectionCts = null;
         private BuffCardViewModel _exclusiveCard = null;
         private bool _isPatrolRunning = false;
         private CancellationTokenSource _patrolCts = null;
@@ -530,6 +533,7 @@ namespace ArtaleProBuff
             base.OnClosed(e);
             
             StopGlobalMonitorLoop();
+            StopRuneDetection();
             
             if (_hwnd != IntPtr.Zero)
             {
@@ -723,10 +727,36 @@ namespace ArtaleProBuff
             }
             listChannelClickSteps.ItemsSource = _channelClickSteps;
 
+            // Initialize Rune Detection config
+            switchRuneDetection.IsChecked = _config.rune_enabled;
+            txtRuneKeywords.Text = _config.rune_keywords ?? "解放符文,解除诅咒,解除詛咒,未解除符文";
+            txtRuneInterval.Text = _config.rune_interval ?? "2.0";
+            chkRuneStopAll.IsChecked = _config.rune_stop_all;
+            chkRuneCloseGame.IsChecked = _config.rune_close_game;
+            chkRuneRunClickSequence.IsChecked = _config.rune_run_click_sequence;
+
+            if (_config.rune_click_steps == null)
+            {
+                _config.rune_click_steps = new List<ChannelClickStep>();
+            }
+
+            _runeClickSteps.Clear();
+            foreach (var step in _config.rune_click_steps)
+            {
+                _runeClickSteps.Add(step);
+            }
+            listRuneClickSteps.ItemsSource = _runeClickSteps;
+
             RefreshBossHuntMapsCombo("");
             
             ToggleBgFields();
             ToggleExpFields();
+            ToggleRuneFields();
+
+            if (_config.rune_enabled)
+            {
+                StartRuneDetection();
+            }
         }
 
         private void SaveSettings(bool showPrompt = true)
@@ -749,6 +779,14 @@ namespace ArtaleProBuff
             
             _config.cards = CloneCards(_cards.ToList());
             _config.patrol_groups = ClonePatrolGroups(_patrolGroups.ToList());
+
+            _config.rune_enabled = switchRuneDetection.IsChecked == true;
+            _config.rune_keywords = txtRuneKeywords.Text.Trim();
+            _config.rune_interval = txtRuneInterval.Text.Trim();
+            _config.rune_stop_all = chkRuneStopAll.IsChecked == true;
+            _config.rune_close_game = chkRuneCloseGame.IsChecked == true;
+            _config.rune_run_click_sequence = chkRuneRunClickSequence.IsChecked == true;
+            _config.rune_click_steps = _runeClickSteps.ToList();
             
             ConfigHelper.Save(_config);
             
@@ -1906,13 +1944,14 @@ namespace ArtaleProBuff
 
         private void SwitchTab(object? selectedItem)
         {
-            if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null || BossHuntingPanel == null) return;
+            if (KeysPanel == null || PatrolPanel == null || PresetsPanel == null || SettingsPanel == null || BossHuntingPanel == null || RunePanel == null) return;
             
             KeysPanel.Visibility = Visibility.Collapsed;
             PatrolPanel.Visibility = Visibility.Collapsed;
             PresetsPanel.Visibility = Visibility.Collapsed;
             SettingsPanel.Visibility = Visibility.Collapsed;
             BossHuntingPanel.Visibility = Visibility.Collapsed;
+            RunePanel.Visibility = Visibility.Collapsed;
             
             if (selectedItem is NavigationViewItem item)
             {
@@ -1936,6 +1975,10 @@ namespace ArtaleProBuff
                 else if (content.Contains("全局与安全"))
                 {
                     SettingsPanel.Visibility = Visibility.Visible;
+                }
+                else if (content.Contains("符文检测"))
+                {
+                    RunePanel.Visibility = Visibility.Visible;
                 }
             }
         }
@@ -2098,7 +2141,14 @@ namespace ArtaleProBuff
                 patrol_pause_others = false,
                 patrol_fluct = txtPatrolFluct.Text.Trim(),
                 cards = CloneCards(_cards.ToList()),
-                patrol_groups = ClonePatrolGroups(_patrolGroups.ToList())
+                patrol_groups = ClonePatrolGroups(_patrolGroups.ToList()),
+                rune_enabled = switchRuneDetection.IsChecked == true,
+                rune_keywords = txtRuneKeywords.Text.Trim(),
+                rune_interval = txtRuneInterval.Text.Trim(),
+                rune_stop_all = chkRuneStopAll.IsChecked == true,
+                rune_close_game = chkRuneCloseGame.IsChecked == true,
+                rune_run_click_sequence = chkRuneRunClickSequence.IsChecked == true,
+                rune_click_steps = _runeClickSteps.ToList()
             };
             
             _config.presets[name] = preset;
@@ -2108,6 +2158,70 @@ namespace ArtaleProBuff
             comboPresets.SelectedItem = name;
             
             System.Windows.MessageBox.Show(this, $"预设方案 '{name}' 已成功保存！", "预设已保存", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void LoadPresetDataIntoUi(PresetData preset, string name)
+        {
+            txtGlobalDelay.Text = preset.global_delay;
+            switchBgMode.IsChecked = preset.bg_enabled;
+            comboBgWindow.Text = preset.bg_title;
+            switchExpMonitor.IsChecked = preset.exp_enabled;
+            switchExpCloseGame.IsChecked = preset.exp_close_game;
+            txtExpTimeout.Text = preset.exp_time;
+            
+            _cropX = preset.exp_crop_x;
+            _cropY = preset.exp_crop_y;
+            _cropW = preset.exp_crop_w;
+            _cropH = preset.exp_crop_h;
+            
+            txtPatrolFluct.Text = preset.patrol_fluct;
+            
+            _cards.Clear();
+            var clonedCards = CloneCards(preset.cards);
+            foreach (var c in clonedCards) _cards.Add(c);
+            
+            _patrolGroups.Clear();
+            var clonedGroups = ClonePatrolGroups(preset.patrol_groups);
+            if (clonedGroups != null)
+            {
+                foreach (var g in clonedGroups)
+                {
+                    g.InitializeStepsFromLegacy();
+                    _patrolGroups.Add(g);
+                }
+            }
+
+            // Apply Rune Settings from Preset
+            switchRuneDetection.IsChecked = preset.rune_enabled;
+            txtRuneKeywords.Text = preset.rune_keywords ?? "解放符文,解除诅咒,解除詛咒,未解除符文";
+            txtRuneInterval.Text = preset.rune_interval ?? "2.0";
+            chkRuneStopAll.IsChecked = preset.rune_stop_all;
+            chkRuneCloseGame.IsChecked = preset.rune_close_game;
+            chkRuneRunClickSequence.IsChecked = preset.rune_run_click_sequence;
+
+            _runeClickSteps.Clear();
+            if (preset.rune_click_steps != null)
+            {
+                foreach (var step in preset.rune_click_steps)
+                {
+                    _runeClickSteps.Add(step);
+                }
+            }
+            
+            txtPresetName.Text = name; // Sync name textbox
+            
+            ToggleBgFields();
+            ToggleExpFields();
+            ToggleRuneFields();
+
+            if (preset.rune_enabled)
+            {
+                StartRuneDetection();
+            }
+            else
+            {
+                StopRuneDetection();
+            }
         }
 
         private void BtnLoadPreset_Click(object sender, RoutedEventArgs e)
@@ -2121,37 +2235,7 @@ namespace ArtaleProBuff
             string name = comboPresets.SelectedItem.ToString();
             if (_config.presets.TryGetValue(name, out var preset))
             {
-                txtGlobalDelay.Text = preset.global_delay;
-                switchBgMode.IsChecked = preset.bg_enabled;
-                comboBgWindow.Text = preset.bg_title;
-                switchExpMonitor.IsChecked = preset.exp_enabled;
-                switchExpCloseGame.IsChecked = preset.exp_close_game;
-                txtExpTimeout.Text = preset.exp_time;
-                
-                _cropX = preset.exp_crop_x;
-                _cropY = preset.exp_crop_y;
-                _cropW = preset.exp_crop_w;
-                _cropH = preset.exp_crop_h;
-                
-                txtPatrolFluct.Text = preset.patrol_fluct;
-                
-                _cards.Clear();
-                var clonedCards = CloneCards(preset.cards);
-                foreach (var c in clonedCards) _cards.Add(c);
-                
-                _patrolGroups.Clear();
-                var clonedGroups = ClonePatrolGroups(preset.patrol_groups);
-                foreach (var g in clonedGroups)
-                {
-                    g.InitializeStepsFromLegacy();
-                    _patrolGroups.Add(g);
-                }
-                
-                txtPresetName.Text = name; // Sync name textbox on load
-                
-                ToggleBgFields();
-                ToggleExpFields();
-                
+                LoadPresetDataIntoUi(preset, name);
                 System.Windows.MessageBox.Show(this, $"已成功加载并应用预设方案 '{name}'！", "应用成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -2182,7 +2266,7 @@ namespace ArtaleProBuff
                         string json = System.Text.Json.JsonSerializer.Serialize(dict, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
                         File.WriteAllText(sfd.FileName, json);
                         
-                        System.Windows.MessageBox.Show(this, $"预设方案 '{name}' 已成功导出！", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                        System.Windows.MessageBox.Show(this, $"预设方案已成功导出为: {System.IO.Path.GetFileName(sfd.FileName)}", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     catch (Exception ex)
                     {
@@ -2236,15 +2320,6 @@ namespace ArtaleProBuff
                     comboPresets.ItemsSource = _config.presets.Keys.ToList();
                     comboPresets.SelectedItem = finalName;
                     
-                    // Apply
-                    txtGlobalDelay.Text = preset.global_delay;
-                    switchBgMode.IsChecked = preset.bg_enabled;
-                    comboBgWindow.Text = preset.bg_title;
-                    switchExpMonitor.IsChecked = preset.exp_enabled;
-                    switchExpCloseGame.IsChecked = preset.exp_close_game;
-                    txtExpTimeout.Text = preset.exp_time;
-                    
-                    _cropX = preset.exp_crop_x;
                     _cropY = preset.exp_crop_y;
                     _cropW = preset.exp_crop_w;
                     _cropH = preset.exp_crop_h;
@@ -2334,7 +2409,8 @@ namespace ArtaleProBuff
                 return;
             }
 
-            var cropWin = new CropWindow(screenshot);
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var cropWin = new CropWindow(screenshot, dpi.DpiScaleX, dpi.DpiScaleY);
             cropWin.Owner = this;
             cropWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             if (cropWin.ShowDialog() == true)
@@ -3001,7 +3077,8 @@ namespace ArtaleProBuff
                 return;
             }
 
-            var selectWin = new PointSelectionWindow(screenshot);
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var selectWin = new PointSelectionWindow(screenshot, dpi.DpiScaleX, dpi.DpiScaleY);
             selectWin.Owner = this;
             selectWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             if (selectWin.ShowDialog() == true)
@@ -3020,6 +3097,343 @@ namespace ArtaleProBuff
         {
             Task.Run(async () => await RunChannelChangeMacroAsync());
         }
+
+        // ==========================================
+        // 符文检测业务逻辑方法组
+        // ==========================================
+        private void ToggleRuneFields()
+        {
+            bool active = switchRuneDetection.IsChecked == true;
+            panelRuneFields.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+            expRuneClicks.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void StartRuneDetection()
+        {
+            if (_isRuneDetectionRunning) return;
+            if (_config == null || !_config.rune_enabled) return;
+
+            _runeDetectionCts = new CancellationTokenSource();
+            _isRuneDetectionRunning = true;
+            txtRuneStatus.Text = "监控中 (正在扫描游戏画面)...";
+            txtRuneStatus.Foreground = System.Windows.Media.Brushes.Green;
+
+            Task.Run(async () => await RunRuneDetectionLoopAsync(_runeDetectionCts.Token));
+        }
+
+        private void StopRuneDetection()
+        {
+            if (!_isRuneDetectionRunning) return;
+            _isRuneDetectionRunning = false;
+            if (_runeDetectionCts != null)
+            {
+                _runeDetectionCts.Cancel();
+                _runeDetectionCts.Dispose();
+                _runeDetectionCts = null;
+            }
+            txtRuneStatus.Text = "未启动";
+            txtRuneStatus.Foreground = System.Windows.Media.Brushes.Gray;
+        }
+
+        private async Task RunRuneDetectionLoopAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                double interval = 2.0;
+                if (_config != null)
+                {
+                    double.TryParse(_config.rune_interval, out interval);
+                }
+                if (interval < 0.5) interval = 0.5;
+
+                try
+                {
+                    await Task.Delay((int)(interval * 1000), token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+
+                IntPtr hwnd = GetTargetHwnd();
+                if (hwnd == IntPtr.Zero)
+                {
+                    UpdateUi(() =>
+                    {
+                        txtRuneStatus.Text = "监控暂停: 未找到游戏窗口";
+                        txtRuneStatus.Foreground = System.Windows.Media.Brushes.Orange;
+                    });
+                    continue;
+                }
+
+                UpdateUi(() =>
+                {
+                    txtRuneStatus.Text = "监控中 (正在扫描游戏画面)...";
+                    txtRuneStatus.Foreground = System.Windows.Media.Brushes.Green;
+                });
+
+                BitmapSource? screenshot = null;
+                try
+                {
+                    screenshot = CaptureWindowClientArea(hwnd);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Rune capture error: {ex.Message}");
+                }
+
+                if (screenshot == null)
+                {
+                    UpdateUi(() =>
+                    {
+                        txtRuneStatus.Text = "监控暂停: 截图失败 (窗口可能最小化)";
+                        txtRuneStatus.Foreground = System.Windows.Media.Brushes.Orange;
+                    });
+                    continue;
+                }
+
+                string ocrText = await OcrBitmapAsync(screenshot);
+                if (string.IsNullOrWhiteSpace(ocrText) || ocrText.StartsWith("__ERROR_"))
+                {
+                    continue; 
+                }
+
+                string[] keywords = new string[0];
+                if (_config != null && !string.IsNullOrEmpty(_config.rune_keywords))
+                {
+                    keywords = _config.rune_keywords.Split(new char[] { ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
+                }
+
+                bool matched = false;
+                string matchedKeyword = "";
+                foreach (var kw in keywords)
+                {
+                    string trimmedKw = kw.Trim();
+                    if (!string.IsNullOrEmpty(trimmedKw) && ocrText.IndexOf(trimmedKw, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        matched = true;
+                        matchedKeyword = trimmedKw;
+                        break;
+                    }
+                }
+
+                if (matched)
+                {
+                    UpdateUi(() =>
+                    {
+                        txtRuneStatus.Text = $"🚨 发现符文诅咒! 匹配词: [{matchedKeyword}]";
+                        txtRuneStatus.Foreground = System.Windows.Media.Brushes.Red;
+                    });
+
+                    await HandleRuneTriggeredAsync(hwnd);
+                    
+                    // 触应急操作后自动关闭检测，防止重复触发
+                    StopRuneDetection();
+                    UpdateUi(() => switchRuneDetection.IsChecked = false);
+                    break;
+                }
+            }
+        }
+
+        private async Task HandleRuneTriggeredAsync(IntPtr hwnd)
+        {
+            if (_config == null) return;
+
+            // 1. 立即停止挂机运行
+            if (_config.rune_stop_all)
+            {
+                UpdateUi(() =>
+                {
+                    StopAll();
+                    txtRuneStatus.Text = "🚨 发现符文诅咒! 已立即停止全部挂机运行";
+                    txtRuneStatus.Foreground = System.Windows.Media.Brushes.Red;
+                });
+            }
+
+            // 2. 执行点击序列
+            if (_config.rune_run_click_sequence)
+            {
+                UpdateUi(() => txtRuneMacroStatus.Text = "开始执行符文应急点击序列...");
+                await RunRuneClickSequenceAsync();
+            }
+
+            // 3. 立即强退关闭游戏窗口
+            if (_config.rune_close_game)
+            {
+                try
+                {
+                    GetWindowThreadProcessId(hwnd, out uint pid);
+                    if (pid != 0)
+                    {
+                        var process = System.Diagnostics.Process.GetProcessById((int)pid);
+                        process.Kill();
+                        UpdateUi(() =>
+                        {
+                            txtRuneStatus.Text = "🚨 发现符文诅咒! 已强制物理关闭游戏窗口";
+                            txtRuneStatus.Foreground = System.Windows.Media.Brushes.Red;
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to close game process: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task RunRuneClickSequenceAsync()
+        {
+            IntPtr hwnd = GetTargetHwnd();
+            if (hwnd == IntPtr.Zero)
+            {
+                UpdateUi(() => txtRuneMacroStatus.Text = "错误: 未找到游戏窗口");
+                return;
+            }
+
+            POINT originalPos;
+            bool gotPos = GetCursorPos(out originalPos);
+
+            var steps = _runeClickSteps.ToList();
+            if (steps.Count == 0)
+            {
+                UpdateUi(() => txtRuneMacroStatus.Text = "警告: 符文点击步骤为空，请先添加步骤！");
+                return;
+            }
+
+            SetForegroundWindow(hwnd);
+            await Task.Delay(250);
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                UpdateUi(() => txtRuneMacroStatus.Text = $"步骤 {i + 1}/{steps.Count} '{step.Name}': 相对({step.X}, {step.Y}) -> 屏幕({step.X}, {step.Y})...");
+
+                POINT pt = new POINT { X = step.X, Y = step.Y };
+                ClientToScreen(hwnd, ref pt);
+
+                SetCursorPos(pt.X, pt.Y);
+                await Task.Delay(100);
+
+                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                await Task.Delay(50);
+                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+
+                int delayMs = (int)(step.DelaySeconds * 1000);
+                int remainingDelay = delayMs - 150;
+                if (remainingDelay > 0)
+                {
+                    await Task.Delay(remainingDelay);
+                }
+            }
+
+            if (gotPos)
+            {
+                SetCursorPos(originalPos.X, originalPos.Y);
+            }
+
+            UpdateUi(() => txtRuneMacroStatus.Text = "点击步骤执行完毕");
+        }
+
+        private void SwitchRuneDetection_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return;
+            _config.rune_enabled = switchRuneDetection.IsChecked == true;
+            ConfigHelper.Save(_config);
+            ToggleRuneFields();
+
+            if (_config.rune_enabled)
+            {
+                StartRuneDetection();
+            }
+            else
+            {
+                StopRuneDetection();
+            }
+        }
+
+        private void RuneConfigField_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return;
+            if (txtRuneKeywords != null) _config.rune_keywords = txtRuneKeywords.Text.Trim();
+            if (txtRuneInterval != null) _config.rune_interval = txtRuneInterval.Text.Trim();
+            _config.rune_stop_all = chkRuneStopAll.IsChecked == true;
+            _config.rune_close_game = chkRuneCloseGame.IsChecked == true;
+            _config.rune_run_click_sequence = chkRuneRunClickSequence.IsChecked == true;
+            ConfigHelper.Save(_config);
+        }
+
+        private void RuneStepField_Changed(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (_config == null || _runeClickSteps == null) return;
+            _config.rune_click_steps = _runeClickSteps.ToList();
+            ConfigHelper.Save(_config);
+        }
+
+        private void BtnAddRuneStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (_config == null || _runeClickSteps == null) return;
+            var newStep = new ChannelClickStep { Name = $"步骤 {_runeClickSteps.Count + 1}", X = 0, Y = 0, DelaySeconds = 0.5 };
+            _runeClickSteps.Add(newStep);
+            _config.rune_click_steps = _runeClickSteps.ToList();
+            ConfigHelper.Save(_config);
+        }
+
+        private void BtnDeleteRuneStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (_config == null || _runeClickSteps == null) return;
+            var button = sender as System.Windows.Controls.Button;
+            if (button == null) return;
+            var step = button.DataContext as ChannelClickStep;
+            if (step == null) return;
+            _runeClickSteps.Remove(step);
+            _config.rune_click_steps = _runeClickSteps.ToList();
+            ConfigHelper.Save(_config);
+        }
+
+        private void BtnRecordRuneStepPoint_Click(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return;
+            
+            var button = sender as System.Windows.Controls.Button;
+            if (button == null) return;
+            
+            var step = button.DataContext as ChannelClickStep;
+            if (step == null) return;
+
+            IntPtr hwnd = GetTargetHwnd();
+            if (hwnd == IntPtr.Zero)
+            {
+                System.Windows.MessageBox.Show(this, "请先指定正确的游戏窗口！", "未找到指定窗口", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var screenshot = CaptureWindowClientArea(hwnd);
+            if (screenshot == null)
+            {
+                System.Windows.MessageBox.Show(this, "截取游戏窗口画面失败，请确保游戏未最小化！", "截图失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var selectWin = new PointSelectionWindow(screenshot, dpi.DpiScaleX, dpi.DpiScaleY);
+            selectWin.Owner = this;
+            selectWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            if (selectWin.ShowDialog() == true)
+            {
+                var point = selectWin.SelectedPoint;
+                step.X = (int)point.X;
+                step.Y = (int)point.Y;
+                
+                _config.rune_click_steps = _runeClickSteps.ToList();
+                ConfigHelper.Save(_config);
+                txtRuneMacroStatus.Text = $"步骤 '{step.Name}' 录制成功: ({step.X}, {step.Y})";
+            }
+        }
+
+        private void BtnTestRuneMacro_Click(object sender, RoutedEventArgs e)
+        {
+            Task.Run(async () => await RunRuneClickSequenceAsync());
+        }
     }
 
     public class CropWindow : Window
@@ -3028,11 +3442,15 @@ namespace ArtaleProBuff
         private Rectangle? _selectionRect;
         private Canvas _canvas;
         private bool _isDragging = false;
+        private double _dpiScaleX = 1.0;
+        private double _dpiScaleY = 1.0;
         
         public Int32Rect SelectedRect { get; private set; }
 
-        public CropWindow(BitmapSource screenshot)
+        public CropWindow(BitmapSource screenshot, double dpiScaleX = 1.0, double dpiScaleY = 1.0)
         {
+            _dpiScaleX = dpiScaleX;
+            _dpiScaleY = dpiScaleY;
             WindowStyle = WindowStyle.None;
             AllowsTransparency = true;
             Background = Brushes.Transparent;
@@ -3042,7 +3460,7 @@ namespace ArtaleProBuff
             var image = new System.Windows.Controls.Image
             {
                 Source = screenshot,
-                Stretch = Stretch.None
+                Stretch = Stretch.Fill
             };
             
             _canvas = new Canvas
@@ -3065,8 +3483,8 @@ namespace ArtaleProBuff
             
             Content = grid;
             
-            Width = screenshot.PixelWidth;
-            Height = screenshot.PixelHeight;
+            Width = screenshot.PixelWidth / _dpiScaleX;
+            Height = screenshot.PixelHeight / _dpiScaleY;
             
             _canvas.MouseLeftButtonDown += (s, e) =>
             {
@@ -3124,7 +3542,12 @@ namespace ArtaleProBuff
                     double w = _selectionRect.Width;
                     double h = _selectionRect.Height;
                     
-                    SelectedRect = new Int32Rect((int)x, (int)y, (int)w, (int)h);
+                    SelectedRect = new Int32Rect(
+                        (int)(x * _dpiScaleX),
+                        (int)(y * _dpiScaleY),
+                        (int)(w * _dpiScaleX),
+                        (int)(h * _dpiScaleY)
+                    );
                 }
                 
                 DialogResult = true;
@@ -3146,10 +3569,14 @@ namespace ArtaleProBuff
     public class PointSelectionWindow : Window
     {
         private Canvas _canvas;
+        private double _dpiScaleX = 1.0;
+        private double _dpiScaleY = 1.0;
         public Point SelectedPoint { get; private set; }
 
-        public PointSelectionWindow(BitmapSource screenshot)
+        public PointSelectionWindow(BitmapSource screenshot, double dpiScaleX = 1.0, double dpiScaleY = 1.0)
         {
+            _dpiScaleX = dpiScaleX;
+            _dpiScaleY = dpiScaleY;
             WindowStyle = WindowStyle.None;
             AllowsTransparency = true;
             Background = Brushes.Transparent;
@@ -3158,7 +3585,7 @@ namespace ArtaleProBuff
             var image = new System.Windows.Controls.Image
             {
                 Source = screenshot,
-                Stretch = Stretch.None
+                Stretch = Stretch.Fill
             };
             
             _canvas = new Canvas
@@ -3172,12 +3599,13 @@ namespace ArtaleProBuff
             
             Content = grid;
             
-            Width = screenshot.PixelWidth;
-            Height = screenshot.PixelHeight;
+            Width = screenshot.PixelWidth / _dpiScaleX;
+            Height = screenshot.PixelHeight / _dpiScaleY;
             
             _canvas.MouseLeftButtonUp += (s, e) =>
             {
-                SelectedPoint = e.GetPosition(_canvas);
+                var pt = e.GetPosition(_canvas);
+                SelectedPoint = new Point(pt.X * _dpiScaleX, pt.Y * _dpiScaleY);
                 DialogResult = true;
                 Close();
             };
