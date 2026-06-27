@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>楓之谷 Artale | 擊殺與 Boss 監控助手</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #09090e 0%, #12121e 100%);
+            --card-bg: rgba(22, 22, 33, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00f0ff;
+            --accent-green: #39ff14;
+            --accent-red: #ff3131;
+            --accent-amber: #ffaa00;
+            --text-primary: #f4f4f7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --shadow-glow: 0 0 20px rgba(0, 240, 255, 0.25);
+            --shadow-red-glow: 0 0 25px rgba(255, 49, 49, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 520px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), var(--shadow-glow);
+            padding: 24px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        /* Red glow animation when boss spawns */
+        .dashboard.boss-alert {
+            border-color: var(--accent-red);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), var(--shadow-red-glow);
+            animation: borderPulse 1.5s infinite alternate;
+        }
+
+        @keyframes borderPulse {
+            0% { border-color: rgba(255, 49, 49, 0.4); box-shadow: 0 0 15px rgba(255, 49, 49, 0.2); }
+            100% { border-color: rgba(255, 49, 49, 1); box-shadow: 0 0 35px rgba(255, 49, 49, 0.6); }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .title-group h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-group p {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.connected {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .status-dot.disconnected {
+            background-color: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+
+        .status-dot.paused {
+            background-color: var(--accent-amber);
+            box-shadow: 0 0 8px var(--accent-amber);
+        }
+
+        /* Kill Counter section */
+        .counter-section {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .counter-num-group {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+
+        .kill-number {
+            font-size: 80px;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            line-height: 1;
+            text-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .kill-number.target-reached {
+            color: var(--accent-green);
+            text-shadow: 0 0 25px rgba(57, 255, 20, 0.5);
+        }
+
+        .kill-number.boss-active {
+            color: var(--accent-red);
+            text-shadow: 0 0 25px rgba(255, 49, 49, 0.6);
+            animation: pulseText 1.5s infinite;
+        }
+
+        @keyframes pulseText {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .kill-total {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-left: 6px;
+        }
+
+        .counter-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 99px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-cyan) 0%, var(--accent-green) 100%);
+            border-radius: 99px;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            transition: width 0.5s cubic-bezier(0.1, 0.8, 0.1, 1), background 0.3s;
+        }
+
+        .progress-bar.target-reached {
+            background: linear-gradient(90deg, var(--accent-green) 0%, #00ff88 100%);
+            box-shadow: 0 0 12px var(--accent-green);
+        }
+
+        .progress-bar.boss-active {
+            background: linear-gradient(90deg, var(--accent-red) 0%, #ff5555 100%);
+            box-shadow: 0 0 15px var(--accent-red);
+            width: 100% !important;
+        }
+
+        /* Controls Section */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        button.primary-btn {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(0, 100, 255, 0.1) 100%);
+            border-color: rgba(0, 240, 255, 0.25);
+            color: var(--accent-cyan);
+        }
+
+        button.primary-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(0, 100, 255, 0.15) 100%);
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.15);
+        }
+
+        button.danger-btn {
+            background: linear-gradient(135deg, rgba(255, 49, 49, 0.1) 0%, rgba(200, 0, 0, 0.05) 100%);
+            border-color: rgba(255, 49, 49, 0.2);
+            color: var(--accent-red);
+        }
+
+        button.danger-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 49, 49, 0.18) 0%, rgba(200, 0, 0, 0.08) 100%);
+            border-color: rgba(255, 49, 49, 0.35);
+            box-shadow: 0 0 12px rgba(255, 49, 49, 0.12);
+        }
+
+        button.secondary-btn {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border-color: rgba(0, 240, 255, 0.2);
+            color: var(--accent-cyan);
+        }
+
+        button.secondary-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border-color: rgba(0, 240, 255, 0.35);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.08);
+        }
+
+        .full-width-btn {
+            grid-column: span 2;
+        }
+
+        /* Sound notification badge */
+        .audio-status-badge {
+            grid-column: span 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            padding: 6px;
+            cursor: pointer;
+            border: 1px dashed rgba(255, 255, 255, 0.04);
+            transition: all 0.2s;
+            margin-top: -4px;
+        }
+
+        .audio-status-badge:hover {
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Live OCR Log console */
+        .console-section {
+            margin-bottom: 20px;
+        }
+
+        .console-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .console-title .badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-cyan);
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .console-window {
+            height: 140px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 12px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #38bdf8;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            scroll-behavior: smooth;
+        }
+
+        .console-line {
+            word-break: break-all;
+            white-space: pre-wrap;
+            border-left: 2px solid transparent;
+            padding-left: 6px;
+        }
+
+        .console-line.system {
+            color: var(--text-muted);
+        }
+
+        .console-line.xp-gain {
+            color: #34d399; /* emerald-400 */
+            border-color: var(--accent-green);
+        }
+
+        .console-line.boss-warning {
+            color: #ef4444; /* red-500 */
+            font-weight: bold;
+            border-color: var(--accent-red);
+            animation: pulseWarning 1s infinite alternate;
+        }
+
+        @keyframes pulseWarning {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        /* Hotkey info footer */
+        footer {
+            font-size: 11px;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 16px;
+        }
+
+        .hotkey-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 6px;
+            column-gap: 16px;
+        }
+
+        .hotkey-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .key-badge {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        /* Custom Scrollbar for console */
+        .console-window::-webkit-scrollbar {
+            width: 6px;
+        }
+        .console-window::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        .console-window::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .console-window::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Real-time Preview & Data Verification styles */
+        .preview-section {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.02);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .data-item {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .data-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-val {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+            font-family: 'Consolas', 'Courier New', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .image-stream-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .image-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .img-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .img-wrapper {
+            height: 52px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .img-wrapper:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
+        }
+
+        .img-wrapper img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            z-index: 1;
+        }
+        
+        .img-wrapper img[src=""] {
+            display: none;
+        }
+        
+        .img-placeholder-text {
+            font-size: 9px;
+            color: var(--text-muted);
+            position: absolute;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard" id="dashboard">
+    <header>
+        <div class="title-group">
+            <h1>楓之谷 Artale 監控助手</h1>
+            <p>MapleStory Worlds - Boss Spawn Monitor</p>
+        </div>
+        <div class="status-badge" id="statusBadge">
+            <span class="status-dot disconnected" id="statusDot"></span>
+            <span id="statusText">檢測中...</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="counter-section">
+            <div class="counter-num-group">
+                <span class="kill-number" id="killCount">0</span>
+                <span class="kill-total">/ 10</span>
+            </div>
+            <div class="counter-label" id="counterLabel">等待檢測遊戲窗口...</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- Real-time Preview & Data Verification Panel -->
+        <div class="preview-section">
+            <div class="data-grid">
+                <div class="data-item">
+                    <span class="data-label">當前總經驗值 (EXP)</span>
+                    <span class="data-val" id="currentExpText">---</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">地圖怪物經驗庫</span>
+                    <span class="data-val" id="currentExpSetText">[]</span>
+                </div>
+            </div>
+            <div class="image-stream-container">
+                <div class="image-box">
+                    <span class="img-label">右側戰鬥日誌監控區</span>
+                    <div class="img-wrapper">
+                        <span class="img-placeholder-text">等待監測遊戲...</span>
+                        <img id="logCropImg" alt="" src="" />
+                    </div>
+                </div>
+                <div class="image-box">
+                    <span class="img-label">底欄經驗值監控區</span>
+                    <div class="img-wrapper">
+                        <span class="img-placeholder-text">等待監測遊戲...</span>
+                        <img id="expCropImg" alt="" src="" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="primary-btn" onclick="triggerAction('/api/add_kill')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                手動擊殺 (+1)
+            </button>
+            <button class="primary-btn" onclick="triggerAction('/api/reset')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                重置計數
+            </button>
+            <button class="danger-btn full-width-btn" id="pauseBtn" onclick="triggerAction('/api/pause')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                <span id="pauseBtnText">暫停監測</span>
+            </button>
+            <button class="secondary-btn full-width-btn" onclick="triggerAction('/api/start_crop_select')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                🎯 框選監控區域 (手動劃區)
+            </button>
+            
+            <div class="audio-status-badge" id="audioBadge" onclick="enableAudio()">
+                觸摸/點擊頁面啟用聲音警報 🔊
+            </div>
+        </div>
+
+        <div class="console-section">
+            <div class="console-title">
+                <span>即時戰鬥日誌 (Live Combat Log)</span>
+                <span class="badge">OCR ACTIVE</span>
+            </div>
+            <div class="console-window" id="consoleWindow">
+                <div class="console-line system">[系統] 監控助手已啟動，等待與後端建立 SSE 連接...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="hotkey-grid">
+            <div class="hotkey-item">
+                <span>重置計數</span>
+                <span class="key-badge">F8</span>
+            </div>
+            <div class="hotkey-item">
+                <span>位置定位(無)</span>
+                <span class="key-badge">F9</span>
+            </div>
+            <div class="hotkey-item">
+                <span>暫停監測</span>
+                <span class="key-badge">F10</span>
+            </div>
+            <div class="hotkey-item">
+                <span>除錯截圖</span>
+                <span class="key-badge">F11</span>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script>
+    let audioEnabled = false;
+    let audioContext = null;
+    let lastKillCount = -1;
+    let lastBossState = false;
+
+    // Log console helper
+    const consoleEl = document.getElementById('consoleWindow');
+    function logToConsole(message, type = 'system') {
+        const line = document.createElement('div');
+        const now = new Date();
+        const timeStr = `[${now.toTimeString().split(' ')[0]}] `;
+        line.className = `console-line ${type}`;
+        line.textContent = timeStr + message;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // Audio enablement
+    function enableAudio() {
+        if (audioEnabled) return;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioEnabled = true;
+            document.getElementById('audioBadge').textContent = '🔊 音效警報已啟用 (已就緒)';
+            document.getElementById('audioBadge').style.borderColor = 'rgba(57, 255, 20, 0.3)';
+            document.getElementById('audioBadge').style.color = 'var(--accent-green)';
+            logToConsole('瀏覽器音效上下文已成功啟動！');
+            playBeep(600, 0.08); // simple confirmation beep
+        } catch (e) {
+            logToConsole('啟動音效失敗: ' + e.message, 'system');
+        }
+    }
+
+    // Play synthetic warning sound
+    function playBeep(frequency, duration) {
+        if (!audioEnabled || !audioContext) return;
+        try {
+            // Check state and resume if suspended (common browser behavior)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gain.gain.setValueAtTime(0.12, audioContext.currentTime);
+            // Quick fade out to avoid clicks
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + duration);
+        } catch (err) {
+            console.error("Audio playback error:", err);
+        }
+    }
+
+    // Alarm melody when Boss is detected
+    function playBossAlarm() {
+        if (!audioEnabled) return;
+        // Alarm pattern: 3 quick high-pitched sweeps
+        let now = 0;
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                playBeep(987.77, 0.15); // B5
+                setTimeout(() => playBeep(1318.51, 0.3), 120); // E6
+            }, i * 500);
+        }
+    }
+
+    // Handle AJAX actions
+    function triggerAction(url) {
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Click handlers implicitly trigger audio context initialization
+                    enableAudio();
+                }
+            })
+            .catch(err => {
+                logToConsole('調用接口失敗: ' + err.message, 'system');
+            });
+    }
+
+    // Setup Server-Sent Events (SSE) listener
+    function connectSSE() {
+        logToConsole('正在連接後端服務...', 'system');
+        const source = new EventSource('/events');
+
+        source.onopen = function() {
+            logToConsole('後端服務已成功連接！實時數據同步中...', 'system');
+        };
+
+        source.onmessage = function(event) {
+            try {
+                const state = JSON.parse(event.data);
+                updateUI(state);
+            } catch (err) {
+                console.error("Failed to parse event data", err);
+            }
+        };
+
+        source.onerror = function(err) {
+            logToConsole('與後端的連接斷開，5秒後嘗試重新連接...', 'system');
+            document.getElementById('statusDot').className = 'status-dot disconnected';
+            document.getElementById('statusText').textContent = '與伺服器斷開';
+            source.close();
+            setTimeout(connectSSE, 5000);
+        };
+    }
+
+    // Update UI elements based on state object
+    function updateUI(state) {
+        const killCountEl = document.getElementById('killCount');
+        const counterLabelEl = document.getElementById('counterLabel');
+        const progressBarEl = document.getElementById('progressBar');
+        const dashboardEl = document.getElementById('dashboard');
+        const statusDotEl = document.getElementById('statusDot');
+        const statusTextEl = document.getElementById('statusText');
+        const pauseBtnTextEl = document.getElementById('pauseBtnText');
+        const pauseBtnEl = document.getElementById('pauseBtn');
+
+        const k = state.kill_count;
+        const bossSpawned = state.boss_spawned;
+        const gameConnected = state.game_connected;
+        const paused = state.paused;
+
+        // 1. Connection Status Badge
+        if (!gameConnected) {
+            statusDotEl.className = 'status-dot disconnected';
+            statusTextEl.textContent = '未檢測到遊戲';
+            counterLabelEl.textContent = '❌ 請啟動遊戲並進入遊戲視窗。將自動鎖定...';
+        } else if (paused) {
+            statusDotEl.className = 'status-dot paused';
+            statusTextEl.textContent = '統計已暫停';
+            counterLabelEl.textContent = '⏸ 監控已暫停。按 F10 鍵或點擊下方按鈕恢復。';
+        } else {
+            statusDotEl.className = 'status-dot connected';
+            statusTextEl.textContent = '監測運行中';
+            if (bossSpawned) {
+                counterLabelEl.textContent = '⚠️ 警報：檢測到 BOSS 氣息！';
+            } else if (k >= 10) {
+                counterLabelEl.textContent = '✨ 擊殺數已滿 10！BOSS 隨時可能出現！';
+            } else {
+                counterLabelEl.textContent = `🎯 正在統計打怪數量。擊殺小怪: ${k} / 10`;
+            }
+        }
+
+        // 2. Pause Button Text
+        if (paused) {
+            pauseBtnTextEl.textContent = '恢復監測';
+            pauseBtnEl.className = 'primary-btn full-width-btn';
+        } else {
+            pauseBtnTextEl.textContent = '暫停監測';
+            pauseBtnEl.className = 'danger-btn full-width-btn';
+        }
+
+        // 3. Update Kill Counter Text & Styling
+        killCountEl.textContent = k;
+        
+        // Remove old classes
+        killCountEl.className = 'kill-number';
+        progressBarEl.className = 'progress-bar';
+        dashboardEl.className = 'dashboard';
+
+        if (bossSpawned) {
+            killCountEl.classList.add('boss-active');
+            progressBarEl.classList.add('boss-active');
+            dashboardEl.classList.add('boss-alert');
+        } else if (k >= 10) {
+            killCountEl.classList.add('target-reached');
+            progressBarEl.classList.add('target-reached');
+            progressBarEl.style.width = '100%';
+        } else {
+            progressBarEl.style.width = (k * 10) + '%';
+        }
+
+        // 4. Print newly matched combat lines in console window
+        if (state.history && state.history.length > 0) {
+            const currentLines = state.history;
+            // Iterate and print lines we haven't seen in the immediate UI session
+            window.printedLines = window.printedLines || new Set();
+            currentLines.forEach(txt => {
+                if (!window.printedLines.has(txt)) {
+                    window.printedLines.add(txt);
+                    logToConsole(`[偵測] ${txt}`, 'xp-gain');
+                }
+            });
+        }
+
+        // 5. Play sounds when events occur
+        if (lastKillCount !== -1) {
+            if (k > lastKillCount) {
+                // Number went up! Play a normal notification
+                if (k >= 10) {
+                    playBossAlarm();
+                } else {
+                    playBeep(523.25, 0.12); // C5 notification beep
+                }
+                logToConsole(`擊殺數增加：${lastKillCount} ➔ ${k}`, 'xp-gain');
+            }
+        }
+        
+        if (bossSpawned && !lastBossState) {
+            // Boss newly spawned! Play heavy alarm
+            playBossAlarm();
+            logToConsole('⚠️ 警告：屏幕中央檢測到 BOSS 邪惡氣息！ ⚠️', 'boss-warning');
+        }
+
+        // 6. Update Real-time Preview Crops & Data Text
+        const currentExpTextEl = document.getElementById('currentExpText');
+        const currentExpSetTextEl = document.getElementById('currentExpSetText');
+        const logCropImgEl = document.getElementById('logCropImg');
+        const expCropImgEl = document.getElementById('expCropImg');
+
+        if (state.current_exp !== undefined && state.current_exp !== null) {
+            currentExpTextEl.textContent = Number(state.current_exp).toLocaleString();
+        } else {
+            currentExpTextEl.textContent = '---';
+        }
+
+        if (state.monster_exp_set && state.monster_exp_set.length > 0) {
+            currentExpSetTextEl.textContent = JSON.stringify(state.monster_exp_set);
+        } else {
+            currentExpSetTextEl.textContent = '[]';
+        }
+
+        if (state.log_crop_base64) {
+            logCropImgEl.src = 'data:image/jpeg;base64,' + state.log_crop_base64;
+        } else {
+            logCropImgEl.src = '';
+        }
+
+        if (state.exp_crop_base64) {
+            expCropImgEl.src = 'data:image/jpeg;base64,' + state.exp_crop_base64;
+        } else {
+            expCropImgEl.src = '';
+        }
+
+        lastKillCount = k;
+        lastBossState = bossSpawned;
+    }
+
+    // Connect on load
+    window.addEventListener('load', () => {
+        try {
+            window.resizeTo(520, 740);
+        } catch (e) {
+            console.error("Failed to resize window:", e);
+        }
+    });
+    window.addEventListener('click', enableAudio);
+    connectSSE();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 536, in ocr_worker
+    if untracked_exp_gain > 0 and state["monster_exp"] is not None and state["monster_exp"] > 0:
+       ^^^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    extra_kills = 0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
+Error in OCR loop: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\VSC\mxdboss\artale_boss_helper.py", line 535, in ocr_worker
+    # Estimate any missed kills from untracked exp gain
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'untracked_exp_gain' where it is not associated with a value
+
